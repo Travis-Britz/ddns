@@ -219,11 +219,14 @@ func getLocalIPAddresses() (addrs []netip.Addr, err error) {
 			log.Printf("error parsing local ip %s from interface %s: %s", addr.String(), iface, err)
 			continue
 		}
+		if ip.Addr().IsLoopback() {
+			continue
+		}
 		addrs = append(addrs, ip.Addr())
 	}
 
-	if hasErrors && len(addrs) == 0 {
-		return nil, errors.New("errors were encountered while retrieving local IP addresses - see log for details")
+	if hasErrors {
+		return addrs, errors.New("errors were encountered while retrieving local IP addresses - see log for details")
 	}
 
 	return addrs, nil
