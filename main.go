@@ -60,11 +60,18 @@ func run() error {
 		return fmt.Errorf("error making api: %w", err)
 	}
 
-	zid, err := api.ZoneIDByName(config.Domain)
-	if err != nil {
-		return fmt.Errorf("could not find zone \"%s\" by name: %w", config.Domain, err)
+	if err := setIPs(api, config.Domain, newIPs); err != nil {
+		return fmt.Errorf("error updating %s with new IPs: %w", config.Domain, err)
 	}
 
+	return nil
+}
+
+func setIPs(api *cloudflare.API, domain string, addrs []netip.Addr) error {
+	zid, err := api.ZoneIDByName(domain)
+	if err != nil {
+		return fmt.Errorf("could not find zone \"%s\" by name: %w", domain, err)
+	}
 	api.UpdateDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), cloudflare.UpdateDNSRecordParams{
 		Type:     "",
 		Name:     "",
@@ -97,8 +104,6 @@ func run() error {
 		Comment:    "",
 		Tags:       []string{},
 	})
-
-	return nil
 }
 
 func runSetup() error {
