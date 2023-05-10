@@ -18,8 +18,6 @@ import (
 	"golang.org/x/term"
 )
 
-const iface = "wlan0"
-
 var config = struct {
 	Domain  string
 	KeyFile string
@@ -199,12 +197,7 @@ func (pe permissionError) Error() string {
 }
 
 func getLocalIPAddresses() (addrs []netip.Addr, err error) {
-	ief, err := net.InterfaceByName(iface)
-	if err != nil {
-		return nil, fmt.Errorf("error getting interface by name: %w", err)
-	}
-
-	adds, err := ief.Addrs()
+	adds, err := net.InterfaceAddrs()
 	if err != nil {
 		return nil, fmt.Errorf("error getting addresses for interface: %w", err)
 	}
@@ -216,7 +209,7 @@ func getLocalIPAddresses() (addrs []netip.Addr, err error) {
 		ip, err := netip.ParsePrefix(addr.String())
 		if err != nil {
 			hasErrors = true
-			log.Printf("error parsing local ip %s from interface %s: %s", addr.String(), iface, err)
+			log.Printf("error parsing local ip %s: %s", addr.String(), err)
 			continue
 		}
 		if ip.Addr().IsLoopback() {
