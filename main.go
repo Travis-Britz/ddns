@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -22,14 +23,12 @@ var config = struct {
 	Domain  string
 	KeyFile string
 	IP      string
-}{
-	KeyFile: "~/.cloudflare",
-}
+}{}
 
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
 	flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
-	flag.StringVar(&config.KeyFile, "k", config.KeyFile, "Path to cloudflare API credentials file")
+	flag.StringVar(&config.KeyFile, "k", filepath.Join(os.Getenv("HOME"), ".cloudflare"), "Path to cloudflare API credentials file")
 	flag.Parse()
 }
 
@@ -68,42 +67,43 @@ func run() error {
 }
 
 func setIPs(api *cloudflare.API, domain string, addrs []netip.Addr) error {
-	zid, err := api.ZoneIDByName(domain)
-	if err != nil {
-		return fmt.Errorf("could not find zone \"%s\" by name: %w", domain, err)
-	}
-	api.UpdateDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), cloudflare.UpdateDNSRecordParams{
-		Type:     "",
-		Name:     "",
-		Content:  "",
-		Data:     nil,
-		ID:       "",
-		Priority: new(uint16),
-		TTL:      0,
-		Proxied:  new(bool),
-		Comment:  "",
-		Tags:     []string{},
-	})
+	return nil
+	// zid, err := api.ZoneIDByName(domain)
+	// if err != nil {
+	// 	return fmt.Errorf("could not find zone \"%s\" by name: %w", domain, err)
+	// }
+	// api.UpdateDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), cloudflare.UpdateDNSRecordParams{
+	// 	Type:     "",
+	// 	Name:     "",
+	// 	Content:  "",
+	// 	Data:     nil,
+	// 	ID:       "",
+	// 	Priority: new(uint16),
+	// 	TTL:      0,
+	// 	Proxied:  new(bool),
+	// 	Comment:  "",
+	// 	Tags:     []string{},
+	// })
 
-	api.CreateDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), cloudflare.CreateDNSRecordParams{
-		CreatedOn:  time.Time{},
-		ModifiedOn: time.Time{},
-		Type:       "",
-		Name:       "",
-		Content:    "",
-		Meta:       nil,
-		Data:       nil,
-		ID:         "",
-		ZoneID:     "",
-		ZoneName:   "",
-		Priority:   new(uint16),
-		TTL:        0,
-		Proxied:    new(bool),
-		Proxiable:  false,
-		Locked:     false,
-		Comment:    "",
-		Tags:       []string{},
-	})
+	// api.CreateDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), cloudflare.CreateDNSRecordParams{
+	// 	CreatedOn:  time.Time{},
+	// 	ModifiedOn: time.Time{},
+	// 	Type:       "",
+	// 	Name:       "",
+	// 	Content:    "",
+	// 	Meta:       nil,
+	// 	Data:       nil,
+	// 	ID:         "",
+	// 	ZoneID:     "",
+	// 	ZoneName:   "",
+	// 	Priority:   new(uint16),
+	// 	TTL:        0,
+	// 	Proxied:    new(bool),
+	// 	Proxiable:  false,
+	// 	Locked:     false,
+	// 	Comment:    "",
+	// 	Tags:       []string{},
+	// })
 }
 
 func runSetup() error {
