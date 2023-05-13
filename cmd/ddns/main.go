@@ -175,15 +175,13 @@ func verifyPermissions(path string) error {
 		return fmt.Errorf("error checking keyfile permissions: %w", err)
 	}
 
-	if perms := info.Mode().Perm(); perms != 0600 {
-		return fmt.Errorf("invalid permissions for \"%s\": %w", path, permissionError(perms))
+	perms := info.Mode().Perm()
+	// Error messages will state that we want 0600,
+	// but we'll also accept 0400 which is even more restricted.
+	// The file might be provided by some secrets managing software as readonly.
+	if perms != 0600 && perms != 0400 {
+		return fmt.Errorf("invalid permissions for \"%s\": expected file permissions \"-rw-------\"; found \"%s\"", path, fs.FileMode(perms))
 	}
 
 	return nil
-}
-
-type permissionError fs.FileMode
-
-func (pe permissionError) Error() string {
-	return fmt.Sprintf("expected file permissions \"-rw-------\"; found \"%s\"", fs.FileMode(pe))
 }
