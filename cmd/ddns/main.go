@@ -21,11 +21,12 @@ import (
 )
 
 var config = struct {
-	Domain   string
-	KeyFile  string
-	IP       string
-	Interval time.Duration
-	Verbose  bool
+	Domain string
+	// Zone string
+	KeyFile string
+	// IP       string
+	// Interval time.Duration
+	Verbose bool
 }{}
 
 var resolver ddns.Resolver
@@ -34,9 +35,10 @@ var logger *log.Logger = log.New(io.Discard, "", log.LstdFlags)
 
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
-	flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
+	// flag.stringVar(&config.Zone, "z", "", "The name of the Cloudflare Zone which is managing the domain name")
+	// flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
 	flag.StringVar(&config.KeyFile, "k", filepath.Join(os.Getenv("HOME"), ".cloudflare"), "Path to cloudflare API credentials file")
-	flag.DurationVar(&config.Interval, "i", 1*time.Minute, "Duration to wait between IP checks")
+	// flag.DurationVar(&config.Interval, "i", 1*time.Minute, "Duration to wait between IP checks")
 	flag.BoolVar(&config.Verbose, "v", false, "Enable verbose logging")
 	flag.Parse()
 
