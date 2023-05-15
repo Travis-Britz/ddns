@@ -2,6 +2,7 @@ package ddns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +24,9 @@ func NewCloudflareProvider(token string, logger *log.Logger) (cf *CloudflareProv
 	return cf, err
 }
 
+// CloudflareProvider implements ddns.Provider.
+//
+// It should be constructed using NewCloudflareProvider.
 type CloudflareProvider struct {
 	api    *cloudflare.API
 	logger *log.Logger
@@ -31,6 +35,12 @@ type CloudflareProvider struct {
 }
 
 func (cf *CloudflareProvider) SetDNSRecords(ctx context.Context, domain string, addrs []netip.Addr) error {
+
+	// this nil check feels odd and redundant, but it's technically possible for someone to use the type directly and cause a program crash.
+	// should I just unexport CloudflareProvider and make the constructor return an interface or unexported type?
+	if cf.api == nil {
+		return errors.New("ddns.CloudflareProvider.SetDNSRecords: ddns.CloudflareProvider should be constructed with ddns.NewCloudflareProvider")
+	}
 
 	sl := strings.Split(domain, ".")
 	zone := strings.Join(sl[len(sl)-2:], ".")
