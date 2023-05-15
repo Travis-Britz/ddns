@@ -3,6 +3,7 @@ package ddns
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/netip"
 	"strings"
@@ -15,7 +16,9 @@ func NewCloudflareProvider(token string, logger *log.Logger) (cf *CloudflareProv
 	if err != nil {
 		return nil, fmt.Errorf("error creating cloudflare api client: %w", err)
 	}
-	cf.logger = logger
+	if cf.logger = logger; cf.logger == nil {
+		cf.logger = log.New(io.Discard, "", log.LstdFlags)
+	}
 	cf.comment = "managed by ddns"
 	return cf, err
 }
