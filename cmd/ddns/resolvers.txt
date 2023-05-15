@@ -1,0 +1,8 @@
+https://checkip.amazonaws.com/
+https://icanhazip.com/
+https://api64.ipify.org/
+https://api.my-ip.io/ip
+https://api.seeip.org/
+https://ipinfo.io/ip
+https://ident.me/
+https://whatismyip.akamai.com/
