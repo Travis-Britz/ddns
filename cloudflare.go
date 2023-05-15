@@ -39,7 +39,7 @@ func (cf *CloudflareProvider) SetDNSRecords(ctx context.Context, domain string, 
 	cf.logger.Printf("got zone ID: %s\n", zid)
 	cf.logger.Printf("looking up A,AAAA records for zone %s...\n", zid)
 
-	records, _, err := cf.api.ListDNSRecords(context.Background(), cloudflare.ZoneIdentifier(zid), cloudflare.ListDNSRecordsParams{
+	records, _, err := cf.api.ListDNSRecords(ctx, cloudflare.ZoneIdentifier(zid), cloudflare.ListDNSRecordsParams{
 		Type:    "A,AAAA",
 		Name:    domain,
 		Content: "",
@@ -65,7 +65,7 @@ func (cf *CloudflareProvider) SetDNSRecords(ctx context.Context, domain string, 
 		}
 
 		cf.logger.Printf("deleting DNS record for %s...\n", a)
-		err = cf.api.DeleteDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), r.ID)
+		err = cf.api.DeleteDNSRecord(ctx, cloudflare.ZoneIdentifier(zid), r.ID)
 		if err != nil {
 			return fmt.Errorf("unable to delete DNS record %s: %w", r.ID, err)
 		}
@@ -78,7 +78,7 @@ func (cf *CloudflareProvider) SetDNSRecords(ctx context.Context, domain string, 
 			continue
 		}
 		cf.logger.Printf("creating record for %s...", a)
-		record, err := cf.api.CreateDNSRecord(context.TODO(), cloudflare.ZoneIdentifier(zid), cloudflare.CreateDNSRecordParams{
+		record, err := cf.api.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(zid), cloudflare.CreateDNSRecordParams{
 			Type:    recordType(a),
 			Name:    domain,
 			Content: a.String(),
