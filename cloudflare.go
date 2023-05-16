@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/netip"
 	"strings"
@@ -12,14 +11,12 @@ import (
 	"github.com/cloudflare/cloudflare-go"
 )
 
-func NewCloudflareProvider(token string, logger *log.Logger) (cf *CloudflareProvider, err error) {
+func NewCloudflareProvider(token string) (cf *CloudflareProvider, err error) {
 	cf.api, err = cloudflare.NewWithAPIToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("error creating cloudflare api client: %w", err)
 	}
-	if cf.logger = logger; cf.logger == nil {
-		cf.logger = log.New(io.Discard, "", log.LstdFlags)
-	}
+	cf.logger = discard
 	cf.comment = "managed by ddns"
 	return cf, err
 }
@@ -42,6 +39,9 @@ func (cf *CloudflareProvider) SetDNSRecords(ctx context.Context, domain string, 
 		return errors.New("ddns.CloudflareProvider.SetDNSRecords: ddns.CloudflareProvider should be constructed with ddns.NewCloudflareProvider")
 	}
 
+	// todo: this method fails for any domain using a public suffix like co.uk,
+	// and also fails if a subdomain is configured under a separate zone in cloudflare.
+	// I'll have to list all zones for the account and loop through to find the longest match.
 	sl := strings.Split(domain, ".")
 	zone := strings.Join(sl[len(sl)-2:], ".")
 	cf.logger.Printf("looking up zone ID for %s...\n", zone)

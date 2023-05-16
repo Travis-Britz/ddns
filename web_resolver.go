@@ -34,7 +34,7 @@ func (wr *WebResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 	//
 	// todo: round-robin or randomize resolver selection. right now it's just using the first three.
 	// todo: having less than three services configured will increase traffic to one
-	// todo: are there cases where one request is made over ipv4 and one over ipv6?
+	// todo: are there cases where one request is made over ipv4 and one over ipv6? one solution is to hit each resolver with both ipv4/6 and return both
 	if wr.URLs == nil {
 		return nil, errors.New("no external IP lookup services were provided")
 	}

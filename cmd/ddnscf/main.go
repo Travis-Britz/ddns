@@ -45,7 +45,7 @@ func init() {
 	if config.Verbose {
 		logger = log.Default()
 	}
-	resolver = &ddns.LocalResolver{Logger: logger}
+	resolver = &ddns.LocalResolver{}
 
 }
 
@@ -68,19 +68,16 @@ func run() error {
 	}
 	logger.Println("successfully read key from key file")
 
-	provider, err = ddns.NewCloudflareProvider(key, logger)
+	client, err := ddns.New(
+		ddns.UsingCloudflare(key),
+		ddns.UsingResolver(resolver),
+		ddns.WithLogger(logger),
+	)
 	if err != nil {
-		return fmt.Errorf("error creating cloudflare dns provider: %w", err)
+		return fmt.Errorf("error creating ddns.Client: %w", err)
 	}
-
-	newIPs, err := resolver.Resolve(context.TODO())
-	if err != nil {
-		return fmt.Errorf("error getting IPs: %w", err)
-	}
-	logger.Printf("got local IPs: %+v\n", newIPs)
-
-	if err := provider.SetDNSRecords(context.TODO(), config.Domain, newIPs); err != nil {
-		return fmt.Errorf("error updating %s with new IPs: %w", config.Domain, err)
+	if err := client.Run(context.TODO(), config.Domain); err != nil {
+		return fmt.Errorf("client.Run: %w", err)
 	}
 
 	return nil
