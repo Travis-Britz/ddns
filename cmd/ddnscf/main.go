@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -31,7 +32,7 @@ var config = struct {
 var (
 	resolver ddns.Resolver
 	provider ddns.Provider
-	logger   *log.Logger
+	logger   *log.Logger = log.New(io.Discard, "", log.LstdFlags)
 )
 
 func init() {
