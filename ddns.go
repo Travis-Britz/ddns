@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"net/netip"
 	"time"
+
+	"github.com/cloudflare/cloudflare-go"
 )
 
 var DefaultResolver = &LocalResolver{}
@@ -68,15 +71,15 @@ func UsingResolver(resolver Resolver) clientOption {
 	}
 }
 
-type setLogger interface {
-	SetLogger(*log.Logger)
-}
-
 func withLogger(logger *log.Logger) clientOption {
-	if logger == nil {
-		logger = discard
-	}
 	return func(c *client) error {
+		if logger == nil {
+			logger = discard
+		}
+		type setLogger interface {
+			SetLogger(*log.Logger)
+		}
+
 		switch p := c.Provider.(type) {
 		case *CloudflareProvider:
 			p.logger = logger
@@ -98,6 +101,30 @@ func withLogger(logger *log.Logger) clientOption {
 func WithLogger(logger *log.Logger) clientOption {
 	return func(c *client) error {
 		c.logger = logger
+		return nil
+	}
+}
+
+func UsingHTTPClient(httpclient *http.Client) clientOption {
+	return func(c *client) error {
+		if httpclient == nil {
+			httpclient = http.DefaultClient
+		}
+		type setHTTPClient interface {
+			SetHTTPClient(*http.Client)
+		}
+		switch hc := c.Resolver.(type) {
+		case *WebResolver:
+			hc.httpClient = httpclient
+		case setHTTPClient:
+			hc.SetHTTPClient(httpclient)
+		}
+		switch p := c.Provider.(type) {
+		case *CloudflareProvider:
+			cloudflare.HTTPClient(httpclient)(p.api)
+		case setHTTPClient:
+			p.SetHTTPClient(httpclient)
+		}
 		return nil
 	}
 }

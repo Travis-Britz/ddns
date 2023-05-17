@@ -18,8 +18,8 @@ import (
 // urls must speak http and return status "200 OK" with a valid IPv4 or IPv6 address as the first line of the response body.
 // All other responses are considered an error.
 type WebResolver struct {
-	Client *http.Client
-	URLs   []*url.URL
+	httpClient *http.Client
+	URLs       []*url.URL
 }
 
 // Resolve implements ddns.Resolver.
@@ -105,7 +105,7 @@ func (wr *WebResolver) lookup(ctx context.Context, url *url.URL) (netip.Addr, er
 	}
 	req.Header.Set("Cache-Control", "no-cache")
 
-	httpclient := wr.Client
+	httpclient := wr.httpClient
 	if httpclient == nil {
 		httpclient = http.DefaultClient
 	}
