@@ -67,6 +67,11 @@ func UsingResolver(resolver Resolver) clientOption {
 		return nil
 	}
 }
+
+type setLogger interface {
+	SetLogger(*log.Logger)
+}
+
 func withLogger(logger *log.Logger) clientOption {
 	if logger == nil {
 		logger = discard
@@ -75,13 +80,17 @@ func withLogger(logger *log.Logger) clientOption {
 		switch p := c.Provider.(type) {
 		case *CloudflareProvider:
 			p.logger = logger
+		case setLogger:
+			p.SetLogger(logger)
 		}
 
-		// switch r := c.Resolver.(type) {
-		// case *LocalResolver:
-		// case *WebResolver:
-		// case *String:
-		// }
+		switch r := c.Resolver.(type) {
+		case setLogger:
+			r.SetLogger(logger)
+		case *LocalResolver:
+		case *WebResolver:
+		case *String:
+		}
 
 		return nil
 	}
