@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -29,9 +28,11 @@ var config = struct {
 	Verbose bool
 }{}
 
-var resolver ddns.Resolver
-var provider ddns.Provider
-var logger *log.Logger = log.New(io.Discard, "", log.LstdFlags)
+var (
+	resolver ddns.Resolver
+	provider ddns.Provider
+	logger   *log.Logger
+)
 
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
@@ -58,7 +59,7 @@ func main() {
 func run() error {
 
 	if err := validate(); err != nil {
-		return err
+		return fmt.Errorf("run: %w", err)
 	}
 	logger.Printf("config is valid: %+v", config)
 
@@ -68,16 +69,16 @@ func run() error {
 	}
 	logger.Println("successfully read key from key file")
 
-	client, err := ddns.New(
+	client, err := ddns.New(config.Domain,
 		ddns.UsingCloudflare(key),
-		ddns.UsingResolver(resolver),
 		ddns.WithLogger(logger),
+		ddns.UsingResolver(resolver),
 	)
 	if err != nil {
 		return fmt.Errorf("error creating ddns.Client: %w", err)
 	}
-	if err := client.Run(context.TODO(), config.Domain); err != nil {
-		return fmt.Errorf("client.Run: %w", err)
+	if err := client.Run(context.TODO()); err != nil {
+		return fmt.Errorf("run: %w", err)
 	}
 
 	return nil
@@ -89,7 +90,7 @@ func runSetup() error {
 	fmt.Printf("Enter Cloudflare API Key: \n")
 	bytekey, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		return fmt.Errorf("error reading from stdin: %w", err)
+		return fmt.Errorf("runSetup: error reading from stdin: %w", err)
 	}
 	key := string(bytekey)
 
@@ -146,11 +147,11 @@ func readKey(path string) (key string, err error) {
 func validate() error {
 
 	if config.Domain == "" {
-		return errors.New("error: domain cannot be empty")
+		return errors.New("domain cannot be empty")
 	}
 
 	if !strings.Contains(config.Domain, ".") {
-		return errors.New("error: domain must have at least one dot")
+		return errors.New("domain must have at least one dot")
 	}
 
 	_, err := os.Stat(config.KeyFile)

@@ -25,28 +25,41 @@ type Cache interface {
 	FilterNew([]netip.Addr) (add []netip.Addr, remove []netip.Addr)
 }
 
-func New(options ...clientOption) (*Client, error) {
-	c := &Client{}
+func New(domain string, options ...clientOption) (DDNSClient, error) {
+	if domain == "" {
+		return nil, fmt.Errorf("ddns.New: domain cannot be empty")
+	}
+	c := &client{
+		Resolver: DefaultResolver,
+		domain:   domain,
+	}
 	for i, opt := range options {
 		if err := opt(c); err != nil {
 			return nil, fmt.Errorf("ddns.New: option %d returned an error: %s", i, err)
 		}
 	}
+
+	if c.Provider == nil {
+		return nil, fmt.Errorf("ddns.New: no DNS provider was registered and there is no default option - use ddns.UsingCloudflare or similar")
+	}
+
+	// this lets us propagate the logger to dependencies that use one if WithLogger was called before all of the dependencies were registered
+	withLogger(c.logger)(c)
 	return c, nil
 }
 
-type clientOption func(*Client) error
+type clientOption func(*client) error
 
 func UsingCloudflare(token string) clientOption {
-	return func(c *Client) (err error) {
+	return func(c *client) (err error) {
 		if c.Provider, err = NewCloudflareProvider(token); err != nil {
-			return fmt.Errorf("error creating cloudflare dns provider: %w", err)
+			return fmt.Errorf("ddns.UsingCloudflare: error creating cloudflare DNS provider: %w", err)
 		}
 		return nil
 	}
 }
 func UsingResolver(resolver Resolver) clientOption {
-	return func(c *Client) error {
+	return func(c *client) error {
 		if resolver == nil {
 			resolver = DefaultResolver
 		}
@@ -54,51 +67,66 @@ func UsingResolver(resolver Resolver) clientOption {
 		return nil
 	}
 }
-func WithLogger(logger *log.Logger) clientOption {
-	return func(c *Client) error {
-		if logger == nil {
-			logger = discard
-		}
-		c.Log = logger
-
+func withLogger(logger *log.Logger) clientOption {
+	if logger == nil {
+		logger = discard
+	}
+	return func(c *client) error {
 		switch p := c.Provider.(type) {
 		case *CloudflareProvider:
 			p.logger = logger
 		}
 
-		switch r := c.Resolver.(type) {
-		case *LocalResolver:
-			r.Logger = logger
-		case *WebResolver:
-		case *String:
+		// switch r := c.Resolver.(type) {
+		// case *LocalResolver:
+		// case *WebResolver:
+		// case *String:
+		// }
 
-		}
+		return nil
+	}
+}
+func WithLogger(logger *log.Logger) clientOption {
+	return func(c *client) error {
+		c.logger = logger
 		return nil
 	}
 }
 
-type Client struct {
+type DDNSClient interface {
+	Run(ctx context.Context) error
+	RunDaemon(ctx context.Context, interval time.Duration) error
+}
+
+type client struct {
 	Resolver
 	Provider
 	Cache
-	Log *log.Logger
+	logger *log.Logger
+	domain string
 }
 
-func (c *Client) Run(ctx context.Context, domain string) error {
+func (c *client) Run(ctx context.Context) error {
 	newIPs, err := c.Resolve(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting IPs: %w", err)
 	}
-	c.log().Printf("got local IPs: %+v\n", newIPs)
+	c.logger.Printf("got local IPs: %+v\n", newIPs)
 
-	if err := c.SetDNSRecords(ctx, domain, newIPs); err != nil {
-		return fmt.Errorf("error updating %s with new IPs: %w", domain, err)
+	if err := c.SetDNSRecords(ctx, c.domain, newIPs); err != nil {
+		return fmt.Errorf("error updating %s with new IPs: %w", c.domain, err)
 	}
 	return nil
 }
-func (c *Client) RunDaemon(ctx context.Context, domain string, interval time.Duration) error {
+func (c *client) RunDaemon(ctx context.Context, interval time.Duration) error {
 	if interval < 1*time.Minute {
 		interval = 1 * time.Minute
+	}
+
+	// This check may or may not turn out to be very useful,
+	// but it guards against accidentally running the ddns client in daemon mode for a literal string IP that can never change dynamically.
+	if _, ok := c.Resolver.(*String); ok {
+		return fmt.Errorf("ddns.Client.RunDaemon: String resolver will never change IPs")
 	}
 
 	ticker := time.NewTicker(interval)
@@ -109,17 +137,13 @@ func (c *Client) RunDaemon(ctx context.Context, domain string, interval time.Dur
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			err := c.Run(ctx, domain)
+			err := c.Run(ctx)
 			if err != nil {
-				c.log().Printf("ddns.Client.Run: %s", err)
+				if ctx.Err() == context.Canceled || ctx.Err() == context.DeadlineExceeded {
+					return nil
+				}
+				c.logger.Printf("ddns.Client.Run: %s", err)
 			}
 		}
 	}
-}
-
-func (c *Client) log() *log.Logger {
-	if c.Log == nil {
-		c.Log = discard
-	}
-	return c.Log
 }
