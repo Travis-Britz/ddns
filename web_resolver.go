@@ -13,17 +13,17 @@ import (
 	"time"
 )
 
-// WebResolver implements ddns.Resolver to look up our public IP address.
+// webResolver implements ddns.Resolver to look up our public IP address.
 //
 // urls must speak http and return status "200 OK" with a valid IPv4 or IPv6 address as the first line of the response body.
 // All other responses are considered an error.
-type WebResolver struct {
-	httpClient *http.Client
-	URLs       []*url.URL
+type webResolver struct {
+	httpClient  *http.Client
+	serviceURLs []*url.URL
 }
 
 // Resolve implements ddns.Resolver.
-func (wr *WebResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
+func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 	// IP lookup calls out to three of the public IP resolver urls.
 	// It only returns a nil error if the first two non-error responses had matching IPs.
 	// This approach has a number of benefits:
@@ -35,7 +35,7 @@ func (wr *WebResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 	// todo: round-robin or randomize resolver selection. right now it's just using the first three.
 	// todo: having less than three services configured will increase traffic to one
 	// todo: are there cases where one request is made over ipv4 and one over ipv6? one solution is to hit each resolver with both ipv4/6 and return both
-	if wr.URLs == nil {
+	if wr.serviceURLs == nil {
 		return nil, errors.New("no external IP lookup services were provided")
 	}
 
@@ -50,11 +50,11 @@ func (wr *WebResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 	results := make(chan result, 2)
 	const useCount = 3
 
-	resolvercount := len(wr.URLs)
+	resolvercount := len(wr.serviceURLs)
 	var wg sync.WaitGroup
 	wg.Add(useCount)
 	for i := 0; i < useCount; i++ {
-		u := wr.URLs[i%resolvercount]
+		u := wr.serviceURLs[i%resolvercount]
 		go func() {
 			defer wg.Done()
 			r := result{}
@@ -93,7 +93,7 @@ func (wr *WebResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 
 }
 
-func (wr *WebResolver) lookup(ctx context.Context, url *url.URL) (netip.Addr, error) {
+func (wr *webResolver) lookup(ctx context.Context, url *url.URL) (netip.Addr, error) {
 	// 15 seconds is an eternity for the size of the request we're making,
 	// but this ensures that all calls to resolve will eventually complete even if the user supplied context.TODO or context.Background
 	// using http.DefaultClient (with no timeout).

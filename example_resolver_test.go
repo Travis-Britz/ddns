@@ -3,7 +3,6 @@ package ddns_test
 import (
 	"context"
 	"log"
-	"net/url"
 	"os"
 
 	"github.com/Travis-Britz/ddns"
@@ -18,14 +17,9 @@ func Example_publicIPResolver() {
 		"https://icanhazip.com/", // operated by Cloudflare since ~2021
 		"https://ipinfo.io/ip",
 	}
-	var urls []*url.URL
-	for _, s := range services {
-		u, _ := url.Parse(s)
-		urls = append(urls, u)
-	}
 	ddnsClient, err := ddns.New("dynamic-ip.example.com",
 		ddns.UsingCloudflare(cfkey),
-		ddns.UsingResolver(&ddns.WebResolver{URLs: urls}),
+		ddns.UsingWebResolver(services...),
 	)
 	if err != nil {
 		log.Fatalf("error creating ddns client: %s", err)

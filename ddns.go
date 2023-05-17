@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -71,6 +72,20 @@ func UsingResolver(resolver Resolver) clientOption {
 	}
 }
 
+func UsingWebResolver(serviceURL ...string) clientOption {
+	return func(c *client) error {
+		var URLs []*url.URL
+		for _, u := range serviceURL {
+			pu, err := url.Parse(u)
+			if err != nil {
+				return fmt.Errorf("error parsing URL: %w", err)
+			}
+			URLs = append(URLs, pu)
+		}
+		c.Resolver = &webResolver{serviceURLs: URLs}
+		return nil
+	}
+}
 func withLogger(logger *log.Logger) clientOption {
 	return func(c *client) error {
 		if logger == nil {
@@ -91,7 +106,7 @@ func withLogger(logger *log.Logger) clientOption {
 		case setLogger:
 			r.SetLogger(logger)
 		case *LocalResolver:
-		case *WebResolver:
+		case *webResolver:
 		case *String:
 		}
 
@@ -114,7 +129,7 @@ func UsingHTTPClient(httpclient *http.Client) clientOption {
 			SetHTTPClient(*http.Client)
 		}
 		switch hc := c.Resolver.(type) {
-		case *WebResolver:
+		case *webResolver:
 			hc.httpClient = httpclient
 		case setHTTPClient:
 			hc.SetHTTPClient(httpclient)
