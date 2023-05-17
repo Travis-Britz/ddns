@@ -1,14 +1,22 @@
 # ddns
 
-ddns is a small dynamic DNS command line tool and Go library for updating Cloudflare DNS records.
+ddns is a small dynamic DNS Go library and command line tool for updating Cloudflare DNS records.
 
-This project is written specifically to run on the Pi Zero W and update records with the _local_ IP addresses assigned to the Pi. It likely works on any platform supported by Go, however.
+This project was written specifically to run on the Pi Zero W and update records with the _local_ IP addresses assigned to the Pi. It likely works on any platform supported by Go, however.
 
 ## Installation
 
-Place the build binary in your preferred location (with execute permissions) and then run it.
+Using go install:
 
-The program will prompt for a Cloudflare [API token](https://dash.cloudflare.com/profile/api-tokens) and then store it to a file. The token must have `Zone.DNS:Edit` permissions.
+```bash
+go install github.com/Travis-Britz/ddns/cmd/ddnscf@latest
+```
+
+Other:
+
+build ddns/cmd/ddnscf and then move the build binary to your preferred location (with execute permissions).
+
+Once the program is in place, run it. It will prompt for a Cloudflare [API token](https://dash.cloudflare.com/profile/api-tokens) and then store it to a file. The token must have `Zone.DNS:Edit` permissions.
 
 To skip the prompt you may create the key file in advance with the proper file permissions:
 
@@ -18,9 +26,9 @@ echo "MyVerySecretDNSToken" > ~/.cloudflare && chmod 600 ~/.cloudflare
 
 ## Usage
 
-ddns -h:
+ddnscf -h:
 
-    Usage of ddns:
+    Usage of ddnscf:
     -d string
             The domain name to update
     -k string
@@ -32,7 +40,7 @@ ddns -h:
 Update a domain with the _local_ IPs assigned to the Pi:
 
 ```sh
-ddns -v -d pi1.example.com
+ddnscf -v -d pi1.example.com
 ```
 
 ## Tips
