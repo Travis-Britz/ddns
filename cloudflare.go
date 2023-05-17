@@ -12,6 +12,7 @@ import (
 )
 
 func NewCloudflareProvider(token string) (cf *CloudflareProvider, err error) {
+	cf = new(CloudflareProvider)
 	cf.api, err = cloudflare.NewWithAPIToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("error creating cloudflare api client: %w", err)
