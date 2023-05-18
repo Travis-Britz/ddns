@@ -25,7 +25,7 @@ func Example_publicIPResolver() {
 		log.Fatalf("error creating ddns client: %s", err)
 	}
 	// run once:
-	err = ddnsClient.Run(context.Background())
+	err = ddnsClient.RunDDNS(context.Background())
 	if err != nil {
 		log.Fatalf("ddns update failed: %s", err)
 	}

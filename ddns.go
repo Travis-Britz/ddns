@@ -145,8 +145,7 @@ func UsingHTTPClient(httpclient *http.Client) clientOption {
 }
 
 type DDNSClient interface {
-	Run(ctx context.Context) error
-	RunDaemon(ctx context.Context, interval time.Duration) error
+	RunDDNS(ctx context.Context) error
 }
 
 type client struct {
@@ -157,7 +156,7 @@ type client struct {
 	domain string
 }
 
-func (c *client) Run(ctx context.Context) error {
+func (c *client) RunDDNS(ctx context.Context) error {
 	newIPs, err := c.Resolve(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting IPs: %w", err)
@@ -169,32 +168,40 @@ func (c *client) Run(ctx context.Context) error {
 	}
 	return nil
 }
-func (c *client) RunDaemon(ctx context.Context, interval time.Duration) error {
+
+type logf interface {
+	Printf(string, ...any)
+}
+
+// RunDaemon starts ddnsClient as a goroutine.
+//
+// A nil logger for the DDNSClient supplied by this library indicates that the daemon should send error logs to the logger configured in the client.
+// Otherwise the default is to discard log messages.
+func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duration, logger logf) {
 	if interval < 1*time.Minute {
 		interval = 1 * time.Minute
 	}
-
-	// This check may or may not turn out to be very useful,
-	// but it guards against accidentally running the ddns client in daemon mode for a literal string IP that can never change dynamically.
-	if _, ok := c.Resolver.(*String); ok {
-		return fmt.Errorf("ddns.Client.RunDaemon: String resolver will never change IPs")
-	}
-
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-ticker.C:
-			err := c.Run(ctx)
-			if err != nil {
-				if ctx.Err() == context.Canceled || ctx.Err() == context.DeadlineExceeded {
-					return nil
-				}
-				c.logger.Printf("ddns.Client.Run: %s", err)
-			}
+	if logger == nil {
+		if c, ok := ddnsClient.(*client); ok && c.logger != nil {
+			logger = c.logger
+		} else {
+			logger = discard
 		}
 	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				err := ddnsClient.RunDDNS(ctx)
+				if err != nil {
+					logger.Printf("ddns.RunDaemon: %s", err)
+				}
+			}
+		}
+	}()
 }

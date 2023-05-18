@@ -78,7 +78,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("error creating ddns.Client: %w", err)
 	}
-	if err := client.Run(context.TODO()); err != nil {
+	if err := client.RunDDNS(context.TODO()); err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
 

@@ -16,7 +16,7 @@ func Example() {
 		log.Fatalf("error creating ddns client: %s", err)
 	}
 	// run once:
-	err = ddnsClient.Run(context.Background())
+	err = ddnsClient.RunDDNS(context.Background())
 	if err != nil {
 		log.Fatalf("ddns update failed: %s", err)
 	}
@@ -24,8 +24,6 @@ func Example() {
 	// run every 5 minutes and stop after an hour:
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
 	defer cancel()
-	err = ddnsClient.RunDaemon(ctx, 5*time.Minute)
-	if err != nil {
-		log.Fatalf("ddns daemon error: %s", err)
-	}
+	ddns.RunDaemon(ddnsClient, ctx, 5*time.Minute, nil)
+	<-ctx.Done()
 }
