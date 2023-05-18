@@ -11,8 +11,8 @@ import (
 	"github.com/cloudflare/cloudflare-go"
 )
 
-func NewCloudflareProvider(token string) (cf *CloudflareProvider, err error) {
-	cf = new(CloudflareProvider)
+func newCloudflareProvider(token string) (cf *cloudflareProvider, err error) {
+	cf = new(cloudflareProvider)
 	cf.api, err = cloudflare.NewWithAPIToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("error creating cloudflare api client: %w", err)
@@ -22,17 +22,17 @@ func NewCloudflareProvider(token string) (cf *CloudflareProvider, err error) {
 	return cf, err
 }
 
-// CloudflareProvider implements ddns.Provider.
+// cloudflareProvider implements ddns.Provider.
 //
 // It should be constructed using NewCloudflareProvider.
-type CloudflareProvider struct {
+type cloudflareProvider struct {
 	api    *cloudflare.API
 	logger *log.Logger
 	// cache *cache
 	comment string // optional comment to attach to each new DNS entry
 }
 
-func (cf *CloudflareProvider) SetDNSRecords(ctx context.Context, domain string, addrs []netip.Addr) error {
+func (cf *cloudflareProvider) SetDNSRecords(ctx context.Context, domain string, addrs []netip.Addr) error {
 
 	// this nil check feels odd and redundant, but it's technically possible for someone to use the type directly and cause a program crash.
 	// should I just unexport CloudflareProvider and make the constructor return an interface or unexported type?

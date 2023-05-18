@@ -56,7 +56,7 @@ type clientOption func(*client) error
 
 func UsingCloudflare(token string) clientOption {
 	return func(c *client) (err error) {
-		if c.Provider, err = NewCloudflareProvider(token); err != nil {
+		if c.Provider, err = newCloudflareProvider(token); err != nil {
 			return fmt.Errorf("ddns.UsingCloudflare: error creating cloudflare DNS provider: %w", err)
 		}
 		return nil
@@ -96,7 +96,7 @@ func withLogger(logger *log.Logger) clientOption {
 		}
 
 		switch p := c.Provider.(type) {
-		case *CloudflareProvider:
+		case *cloudflareProvider:
 			p.logger = logger
 		case setLogger:
 			p.SetLogger(logger)
@@ -135,7 +135,7 @@ func UsingHTTPClient(httpclient *http.Client) clientOption {
 			hc.SetHTTPClient(httpclient)
 		}
 		switch p := c.Provider.(type) {
-		case *CloudflareProvider:
+		case *cloudflareProvider:
 			cloudflare.HTTPClient(httpclient)(p.api)
 		case setHTTPClient:
 			p.SetHTTPClient(httpclient)
