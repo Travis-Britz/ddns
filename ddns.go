@@ -12,9 +12,16 @@ import (
 	"github.com/cloudflare/cloudflare-go"
 )
 
-var defaultResolver = localResolver{}
+var defaultResolver = InterfaceResolver()
 
 var discard = log.New(io.Discard, "", log.LstdFlags)
+
+// DDNSClient is the interface for updating Dynamic DNS records.
+//
+// It is implemented by the client returned by ddns.New.
+type DDNSClient interface {
+	RunDDNS(ctx context.Context) error
+}
 
 // Resolver is the interface for looking up our external IP addresses.
 //
@@ -84,30 +91,6 @@ func UsingResolver(resolver Resolver) clientOption {
 	}
 }
 
-func setLog(c *client, logger *log.Logger) {
-	if logger == nil {
-		logger = discard
-	}
-	type setLogger interface {
-		SetLogger(*log.Logger)
-	}
-
-	switch p := c.Provider.(type) {
-	case *cloudflareProvider:
-		p.logger = logger
-	case setLogger:
-		p.SetLogger(logger)
-	}
-
-	switch r := c.Resolver.(type) {
-	case setLogger:
-		r.SetLogger(logger)
-	case *localResolver:
-	case *webResolver:
-	case *stringResolver:
-	}
-}
-
 // WithLogger configures the client with a logger for verbose logging.
 //
 // The default logger discards verbose log messages.
@@ -118,6 +101,8 @@ func WithLogger(logger *log.Logger) clientOption {
 	}
 }
 
+// UsingHTTPClient configures the DDNSClient to use the given httpclient for requests made by the Provider and Resolver implementations supplied by this package,
+// or for other types if they implement a SetHTTPClient method.
 func UsingHTTPClient(httpclient *http.Client) clientOption {
 	return func(c *client) error {
 		if httpclient == nil {
@@ -140,13 +125,6 @@ func UsingHTTPClient(httpclient *http.Client) clientOption {
 		}
 		return nil
 	}
-}
-
-// DDNSClient is the interface for updating Dynamic DNS records.
-//
-// It is implemented by the client returned by ddns.New.
-type DDNSClient interface {
-	RunDDNS(ctx context.Context) error
 }
 
 type client struct {
@@ -211,4 +189,28 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 			}
 		}
 	}()
+}
+
+func setLog(c *client, logger *log.Logger) {
+	if logger == nil {
+		logger = discard
+	}
+	type setLogger interface {
+		SetLogger(*log.Logger)
+	}
+
+	switch p := c.Provider.(type) {
+	case *cloudflareProvider:
+		p.logger = logger
+	case setLogger:
+		p.SetLogger(logger)
+	}
+
+	switch r := c.Resolver.(type) {
+	case setLogger:
+		r.SetLogger(logger)
+	case *localResolver:
+	case *webResolver:
+	case *stringResolver:
+	}
 }
