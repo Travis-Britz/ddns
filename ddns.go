@@ -30,6 +30,8 @@ type Resolver interface {
 //
 // Records may be IPv4 or IPv6,
 // and implementations should expect both even if they only use one.
+//
+// Implementations should filter only the changed records (wording)
 type Provider interface {
 	SetDNSRecords(ctx context.Context, domain string, records []netip.Addr) error
 }
@@ -58,7 +60,7 @@ func New(domain string, options ...clientOption) (DDNSClient, error) {
 	}
 
 	// this lets us propagate the logger to dependencies that use one if WithLogger was called before all of the dependencies were registered
-	withLogger(c.logger)(c)
+	setLog(c, c.logger)
 	return c, nil
 }
 
@@ -82,31 +84,27 @@ func UsingResolver(resolver Resolver) clientOption {
 	}
 }
 
-func withLogger(logger *log.Logger) clientOption {
-	return func(c *client) error {
-		if logger == nil {
-			logger = discard
-		}
-		type setLogger interface {
-			SetLogger(*log.Logger)
-		}
+func setLog(c *client, logger *log.Logger) {
+	if logger == nil {
+		logger = discard
+	}
+	type setLogger interface {
+		SetLogger(*log.Logger)
+	}
 
-		switch p := c.Provider.(type) {
-		case *cloudflareProvider:
-			p.logger = logger
-		case setLogger:
-			p.SetLogger(logger)
-		}
+	switch p := c.Provider.(type) {
+	case *cloudflareProvider:
+		p.logger = logger
+	case setLogger:
+		p.SetLogger(logger)
+	}
 
-		switch r := c.Resolver.(type) {
-		case setLogger:
-			r.SetLogger(logger)
-		case *localResolver:
-		case *webResolver:
-		case *stringResolver:
-		}
-
-		return nil
+	switch r := c.Resolver.(type) {
+	case setLogger:
+		r.SetLogger(logger)
+	case *localResolver:
+	case *webResolver:
+	case *stringResolver:
 	}
 }
 
