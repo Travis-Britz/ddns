@@ -47,8 +47,6 @@ func init() {
 	if config.Verbose {
 		logger = log.Default()
 	}
-	resolver = &ddns.LocalResolver{}
-
 }
 
 func main() {

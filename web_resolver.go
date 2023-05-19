@@ -13,6 +13,18 @@ import (
 	"time"
 )
 
+func WebResolver(serviceURL ...string) (Resolver, error) {
+	var URLs []*url.URL
+	for _, u := range serviceURL {
+		pu, err := url.Parse(u)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing URL: %w", err)
+		}
+		URLs = append(URLs, pu)
+	}
+	return &webResolver{serviceURLs: URLs}, nil
+}
+
 // webResolver implements ddns.Resolver to look up our public IP address.
 //
 // urls must speak http and return status "200 OK" with a valid IPv4 or IPv6 address as the first line of the response body.

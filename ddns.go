@@ -7,20 +7,29 @@ import (
 	"log"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
 )
 
-var DefaultResolver = &LocalResolver{}
+var defaultResolver = localResolver{}
 
 var discard = log.New(io.Discard, "", log.LstdFlags)
 
+// Resolver is the interface for looking up our external IP addresses.
+//
+// Results may be either IPv4 or IPv6,
+// but should not include loopback interface addresses such as ::1.
+//
+// A non-nil error may be returned with partial results.
 type Resolver interface {
 	Resolve(context.Context) ([]netip.Addr, error)
 }
 
+// Provider is the interface for setting DNS records with a DNS provider.
+//
+// Records may be IPv4 or IPv6,
+// and implementations should expect both even if they only use one.
 type Provider interface {
 	SetDNSRecords(ctx context.Context, domain string, records []netip.Addr) error
 }
@@ -29,12 +38,13 @@ type Cache interface {
 	FilterNew([]netip.Addr) (add []netip.Addr, remove []netip.Addr)
 }
 
+// New creates a new DDNSClient configured by options for domain.
 func New(domain string, options ...clientOption) (DDNSClient, error) {
 	if domain == "" {
 		return nil, fmt.Errorf("ddns.New: domain cannot be empty")
 	}
 	c := &client{
-		Resolver: DefaultResolver,
+		Resolver: defaultResolver,
 		domain:   domain,
 	}
 	for i, opt := range options {
@@ -65,27 +75,13 @@ func UsingCloudflare(token string) clientOption {
 func UsingResolver(resolver Resolver) clientOption {
 	return func(c *client) error {
 		if resolver == nil {
-			resolver = DefaultResolver
+			resolver = defaultResolver
 		}
 		c.Resolver = resolver
 		return nil
 	}
 }
 
-func UsingWebResolver(serviceURL ...string) clientOption {
-	return func(c *client) error {
-		var URLs []*url.URL
-		for _, u := range serviceURL {
-			pu, err := url.Parse(u)
-			if err != nil {
-				return fmt.Errorf("error parsing URL: %w", err)
-			}
-			URLs = append(URLs, pu)
-		}
-		c.Resolver = &webResolver{serviceURLs: URLs}
-		return nil
-	}
-}
 func withLogger(logger *log.Logger) clientOption {
 	return func(c *client) error {
 		if logger == nil {
@@ -105,14 +101,18 @@ func withLogger(logger *log.Logger) clientOption {
 		switch r := c.Resolver.(type) {
 		case setLogger:
 			r.SetLogger(logger)
-		case *LocalResolver:
+		case *localResolver:
 		case *webResolver:
-		case *String:
+		case *stringResolver:
 		}
 
 		return nil
 	}
 }
+
+// WithLogger configures the client with a logger for verbose logging.
+//
+// The default logger discards verbose log messages.
 func WithLogger(logger *log.Logger) clientOption {
 	return func(c *client) error {
 		c.logger = logger
@@ -144,6 +144,9 @@ func UsingHTTPClient(httpclient *http.Client) clientOption {
 	}
 }
 
+// DDNSClient is the interface for updating Dynamic DNS records.
+//
+// It is implemented by the client returned by ddns.New.
 type DDNSClient interface {
 	RunDDNS(ctx context.Context) error
 }
@@ -173,10 +176,16 @@ type logf interface {
 	Printf(string, ...any)
 }
 
-// RunDaemon starts ddnsClient as a goroutine.
+// RunDaemon starts a goroutine to run ddnsClient every interval.
 //
-// A nil logger for the DDNSClient supplied by this library indicates that the daemon should send error logs to the logger configured in the client.
-// Otherwise the default is to discard log messages.
+// Run errors are reported to logger.
+// A nil logger indicates messages should be sent to the default log.
+// If ddnsClient was the internal type returned by ddns.New,
+// then the default is to use the configured logger for that type.
+// For other unknown ddnsClient values the default is a logger than writes to io.Discard.
+//
+// To stop the daemon,
+// cancel the given context.
 func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duration, logger logf) {
 	if interval < 1*time.Minute {
 		interval = 1 * time.Minute

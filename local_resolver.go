@@ -8,9 +8,9 @@ import (
 	"net/netip"
 )
 
-type LocalResolver struct{}
+type localResolver struct{}
 
-func (r *LocalResolver) Resolve(ctx context.Context) (addrs []netip.Addr, err error) {
+func (r localResolver) Resolve(ctx context.Context) (addrs []netip.Addr, err error) {
 	adds, err := net.InterfaceAddrs()
 	if err != nil {
 		return nil, fmt.Errorf("error getting addresses for interface: %w", err)

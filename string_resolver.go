@@ -6,10 +6,14 @@ import (
 	"net/netip"
 )
 
-type String string
+func FromString(addr string) (Resolver, error) {
+	return stringResolver(addr), nil
+}
 
-func (s *String) Resolve(context.Context) ([]netip.Addr, error) {
-	addr, err := netip.ParseAddr(string(*s))
+type stringResolver string
+
+func (s stringResolver) Resolve(context.Context) ([]netip.Addr, error) {
+	addr, err := netip.ParseAddr(string(s))
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse IP: %w", err)
 	}
