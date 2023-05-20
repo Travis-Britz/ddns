@@ -23,17 +23,16 @@ import (
 // then the resolver will simply return the response.
 // If multiple are given,
 // then the resolver will request from up to three of them and only return successfully if the first two non-error responses agreed on the IP.
-// This approach is taken due to the sensitive nature of having control over DNS records.
+// This approach is taken due to the sensitive nature of public services having control over DNS records.
+// It is recommended to run your own service over https if possible.
 //
 // For clients which have both IPv4 and IPv6 capability,
 // there are at least two ways to ensure both responses match:
-// supply a custom *http.Client with a custom http.Transport (using ddns.WithHTTPClient),
+// supply a custom *http.Client (using ddns.WithHTTPClient) with a custom http.Transport which is configured to use IPv4/6,
 // or use a public IP service endpoint that prefers one or the other, e.g. https://v4.example.com.
 //
 // If you want both IPv4 and IPv6 DNS records set,
 // then use one of the above approaches for each of two web resolvers and use ddns.Join to combine their results.
-//
-// The recommended approach is to run your own service over https.
 func WebResolver(serviceURL ...string) (Resolver, error) {
 	var URLs []*url.URL
 	for _, u := range serviceURL {
@@ -51,7 +50,6 @@ type webResolver struct {
 	serviceURLs []*url.URL
 }
 
-// Resolve implements ddns.Resolver.
 func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 	// IP lookup calls out to three of the public IP resolver urls.
 	// It only returns a nil error if the first two non-error responses had matching IPs.
