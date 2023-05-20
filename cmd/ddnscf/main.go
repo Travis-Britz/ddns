@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -59,6 +60,15 @@ func main() {
 }
 
 func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		<-c
+		logger.Printf("received interrupt")
+		cancel()
+	}()
+
 	if err := validate(); err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -76,12 +86,10 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("error creating ddns.Client: %w", err)
 	}
-	ctx := context.Background()
 	if config.Once {
 		return client.RunDDNS(ctx)
 	}
 	ddns.RunDaemon(client, ctx, config.Interval, log.Default())
-	<-ctx.Done()
 	return nil
 }
 

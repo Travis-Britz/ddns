@@ -33,6 +33,14 @@ type cloudflareProvider struct {
 }
 
 func (cf *cloudflareProvider) SetDNSRecords(ctx context.Context, domain string, addrs []netip.Addr) error {
+	err := cf.setDNSRecords(ctx, domain, addrs)
+	if err != nil {
+		return &cfError{err: err}
+	}
+	return nil
+}
+
+func (cf *cloudflareProvider) setDNSRecords(ctx context.Context, domain string, addrs []netip.Addr) error {
 
 	// this nil check feels odd and redundant, but it's technically possible for someone to use the type directly and cause a program crash.
 	// should I just unexport CloudflareProvider and make the constructor return an interface or unexported type?
@@ -129,4 +137,25 @@ func recordType(a netip.Addr) string {
 		return "AAAA"
 	}
 	panic("unknown ip configuration")
+}
+
+type cfError struct {
+	err error
+}
+
+func (e *cfError) Error() string { return e.err.Error() }
+func (e *cfError) Unwrap() error { return e.err }
+func (e *cfError) IsAuthenticationError() bool {
+	var et *cloudflare.AuthenticationError
+	if errors.As(e.err, &et) {
+		return true
+	}
+	return false
+}
+func (e *cfError) IsAuthorizationError() bool {
+	var et *cloudflare.AuthorizationError
+	if errors.As(e.err, &et) {
+		return true
+	}
+	return false
 }

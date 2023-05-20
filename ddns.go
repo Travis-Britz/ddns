@@ -168,22 +168,38 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 	if logger == nil {
 		logger = log.Default()
 	}
-	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 
-		for {
-			err := ddnsClient.RunDDNS(ctx)
-			if err != nil {
-				logger.Printf("ddns.RunDaemon: %s", err)
-			}
-			select {
-			case <-ctx.Done():
+	for {
+		err := ddnsClient.RunDDNS(ctx)
+		if err != nil {
+			logger.Printf("ddns.RunDaemon: %s", err)
+		}
+		var authentication interface {
+			IsAuthenticationError() bool
+		}
+		if errors.As(err, &authentication) {
+			if authentication.IsAuthenticationError() {
+				logger.Printf("ddns.RunDaemon: bad credentials detected; stopping daemon")
 				return
-			case <-ticker.C:
 			}
 		}
-	}()
+		var authorization interface {
+			IsAuthorizationError() bool
+		}
+		if errors.As(err, &authorization) {
+			if authorization.IsAuthorizationError() {
+				logger.Printf("ddns.RunDaemon: credentials are not authorized to perform that action; stopping daemon")
+				return
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 // Join constructs a resolver that combines the output of multiple resolvers into one.
