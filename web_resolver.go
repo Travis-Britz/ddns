@@ -33,21 +33,13 @@ import (
 //
 // If you want both IPv4 and IPv6 DNS records set,
 // then use one of the above approaches for each of two web resolvers and use ddns.Join to combine their results.
-func WebResolver(serviceURL ...string) (Resolver, error) {
-	var URLs []*url.URL
-	for _, u := range serviceURL {
-		pu, err := url.Parse(u)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing URL: %w", err)
-		}
-		URLs = append(URLs, pu)
-	}
-	return &webResolver{serviceURLs: URLs}, nil
+func WebResolver(serviceURL ...string) Resolver {
+	return &webResolver{serviceURLs: serviceURL}
 }
 
 type webResolver struct {
 	httpClient  *http.Client
-	serviceURLs []*url.URL
+	serviceURLs []string
 }
 
 func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
@@ -66,6 +58,15 @@ func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 		return nil, errors.New("no external IP lookup services were provided")
 	}
 
+	var URLs []*url.URL
+	for _, u := range wr.serviceURLs {
+		pu, err := url.Parse(u)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing URL \"%s\": %w", u, err)
+		}
+		URLs = append(URLs, pu)
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -74,14 +75,14 @@ func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 		err  error
 	}
 
-	results := make(chan result, 2)
 	const useCount = 3
+	results := make(chan result, useCount)
 
-	resolvercount := len(wr.serviceURLs)
+	resolvercount := len(URLs)
 	var wg sync.WaitGroup
 	wg.Add(useCount)
 	for i := 0; i < useCount; i++ {
-		u := wr.serviceURLs[i%resolvercount]
+		u := URLs[i%resolvercount]
 		go func() {
 			defer wg.Done()
 			r := result{}

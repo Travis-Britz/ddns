@@ -198,7 +198,7 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 // This is useful in some instances such as when you want records for both IPv4 and IPv6,
 // but can only get one or the other from a single web service request.
 func Join(resolver ...Resolver) Resolver {
-	return joinResolver{resolvers: resolver}
+	return &joinResolver{resolvers: resolver}
 }
 
 type joinResolver struct {

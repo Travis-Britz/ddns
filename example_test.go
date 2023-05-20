@@ -33,7 +33,7 @@ func ExampleWebResolver() {
 	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	// I'm not vouching for these services, but they do return the IP of the client connection.
 	// If possible, run your own and provide the URL here instead.
-	r, _ := ddns.WebResolver(
+	r := ddns.WebResolver(
 		"https://checkip.amazonaws.com/",
 		"https://icanhazip.com/", // operated by Cloudflare since ~2021
 		"https://ipinfo.io/ip",
@@ -87,13 +87,14 @@ func ExampleInterfaceResolver() {
 
 func ExampleJoin() {
 	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
-	// I'm not vouching for these services, but they do return the IP of the client connection.
-	r1, _ := ddns.WebResolver("https://ipv4.icanhazip.com/")
-	r2, _ := ddns.WebResolver("https://ipv6.icanhazip.com/")
-
 	ddnsClient, err := ddns.New("dynamic-ip.example.com",
 		ddns.UsingCloudflare(cfkey),
-		ddns.UsingResolver(ddns.Join(r1, r2)),
+		ddns.UsingResolver(
+			ddns.Join(
+				ddns.WebResolver("https://ipv4.icanhazip.com/"),
+				ddns.WebResolver("https://ipv6.icanhazip.com/"),
+			),
+		),
 	)
 	if err != nil {
 		log.Fatalf("error creating ddns client: %s", err)
