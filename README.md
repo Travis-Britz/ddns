@@ -1,10 +1,19 @@
+This project was written specifically to run on the Raspberry Pi Zero W and update records with the _local_ IP addresses assigned to the Pi. It likely works on any platform supported by Go, however.
+
 # ddns
 
-ddns is a small dynamic DNS Go library and command line tool for updating Cloudflare DNS records.
+[![Go Reference](https://pkg.go.dev/badge/github.com/Travis-Britz/ddns.svg)](https://pkg.go.dev/github.com/Travis-Britz/ddns)
 
-This project was written specifically to run on the Pi Zero W and update records with the _local_ IP addresses assigned to the Pi. It likely works on any platform supported by Go, however.
+ddns is a small Go library for dynamically updating DNS records.
 
-## Installation
+Currently the only DNS provider included is Cloudflare,
+but the [ddns.Provider](https://pkg.go.dev/github.com/Travis-Britz/ddns#Provider) interface is a single method if you would like to wrap your own provider's API.
+
+## ddnscf
+
+ddnscf is a small command line tool for dynamically updating Cloudflare DNS records.
+
+### Installation
 
 Using go install:
 
@@ -24,7 +33,7 @@ To skip the prompt you may create the key file in advance with the proper file p
 echo "MyVerySecretDNSToken" > ~/.cloudflare && chmod 600 ~/.cloudflare
 ```
 
-## Usage
+### Usage
 
 ddnscf -h:
 
@@ -35,18 +44,26 @@ ddnscf -h:
             Path to cloudflare API credentials file (default "~/.cloudflare")
     -ip string
             Set a specific IP address
+    -if string
+            Use a specific network interface
     -i string
-            Interval duration between runs
+            Interval duration between runs (default 5m0s)
     -once
             Run once and exit
     -v    Enable verbose logging
 
-## Examples
+### Examples
 
 Update a domain with the _local_ IPs assigned to the Pi:
 
 ```sh
 ddnscf -v -d pi1.example.com
+```
+
+Update a domain with the IPs for a specific network interface:
+
+```sh
+ddnscf -v -d pi1.example.com -if wlan0
 ```
 
 Update a domain every minute:
@@ -58,7 +75,7 @@ ddnscf -v -d pi1.example.com -i 1m
 Update a domain once with a specific IP:
 
 ```sh
-ddnscf -v -once -d pi1.example.com -ip 192.168.0.2
+ddnscf -v -d pi1.example.com -ip 192.168.0.2 -once
 ```
 
 ## Tips
