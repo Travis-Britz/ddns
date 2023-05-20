@@ -22,12 +22,13 @@ import (
 )
 
 var config = struct {
-	Domain   string
-	KeyFile  string
-	IP       string
-	Interval time.Duration
-	Verbose  bool
-	Once     bool
+	Domain    string
+	KeyFile   string
+	IP        string
+	Interval  time.Duration
+	Verbose   bool
+	Once      bool
+	Interface string
 }{}
 
 var (
@@ -43,6 +44,7 @@ func init() {
 	flag.DurationVar(&config.Interval, "i", 5*time.Minute, "Interval duration between runs")
 	flag.BoolVar(&config.Verbose, "v", false, "Enable verbose logging")
 	flag.BoolVar(&config.Once, "once", false, "Run once and exit")
+	flag.StringVar(&config.Interface, "if", "", "Network interface name to use for IP address resolution")
 	flag.Parse()
 
 	if config.Verbose {
@@ -50,6 +52,9 @@ func init() {
 	}
 	if config.IP != "" {
 		resolver = ddns.FromString(config.IP)
+	}
+	if config.Interface != "" {
+		resolver = ddns.InterfaceResolver(config.Interface)
 	}
 }
 
