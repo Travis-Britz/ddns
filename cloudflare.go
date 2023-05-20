@@ -40,15 +40,9 @@ func (cf *cloudflareProvider) SetDNSRecords(ctx context.Context, domain string, 
 		return errors.New("ddns.CloudflareProvider.SetDNSRecords: ddns.CloudflareProvider should be constructed with ddns.NewCloudflareProvider")
 	}
 
-	// todo: this method fails for any domain using a public suffix like co.uk,
-	// and also fails if a subdomain is configured under a separate zone in cloudflare.
-	// I'll have to list all zones for the account and loop through to find the longest match.
-	sl := strings.Split(domain, ".")
-	zone := strings.Join(sl[len(sl)-2:], ".")
-	cf.logger.Printf("looking up zone ID for %s...\n", zone)
-	zid, err := cf.api.ZoneIDByName(zone)
+	zid, err := cf.getZoneIDFromDomain(ctx, domain)
 	if err != nil {
-		return fmt.Errorf("unable to get zone ID for %s: %w", zone, err)
+		return fmt.Errorf("unable to get zone ID for %s: %w", domain, err)
 	}
 	cf.logger.Printf("got zone ID: %s\n", zid)
 	cf.logger.Printf("looking up A,AAAA records for zone %s...\n", zid)
@@ -107,6 +101,24 @@ func (cf *cloudflareProvider) SetDNSRecords(ctx context.Context, domain string, 
 	}
 
 	return nil
+}
+
+func (cf *cloudflareProvider) getZoneIDFromDomain(ctx context.Context, domain string) (zid string, err error) {
+	zones, err := cf.api.ListZones(ctx)
+	if err != nil {
+		return "", fmt.Errorf("error listing zones: %w", err)
+	}
+
+	max := 0
+	for _, z := range zones {
+		if strings.HasSuffix(domain, z.Name) && len(z.Name) > max {
+			max, zid = len(z.Name), z.ID
+		}
+	}
+	if max == 0 {
+		return "", fmt.Errorf("unable to find a zone matching \"%s\"", domain)
+	}
+	return zid, nil
 }
 
 func recordType(a netip.Addr) string {
