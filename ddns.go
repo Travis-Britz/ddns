@@ -45,7 +45,7 @@ type Provider interface {
 	SetDNSRecords(ctx context.Context, domain string, records []netip.Addr) error
 }
 
-type Cache interface {
+type cache interface {
 	FilterNew([]netip.Addr) (add []netip.Addr, remove []netip.Addr)
 }
 
@@ -132,7 +132,7 @@ func UsingHTTPClient(httpclient *http.Client) clientOption {
 type client struct {
 	Resolver
 	Provider
-	Cache
+	cache
 	logger *log.Logger
 	domain string
 }
