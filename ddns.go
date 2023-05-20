@@ -180,14 +180,14 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 		defer ticker.Stop()
 
 		for {
+			err := ddnsClient.RunDDNS(ctx)
+			if err != nil {
+				logger.Printf("ddns.RunDaemon: %s", err)
+			}
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				err := ddnsClient.RunDDNS(ctx)
-				if err != nil {
-					logger.Printf("ddns.RunDaemon: %s", err)
-				}
 			}
 		}
 	}()
