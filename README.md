@@ -35,6 +35,10 @@ ddnscf -h:
             Path to cloudflare API credentials file (default "~/.cloudflare")
     -ip string
             Set a specific IP address
+    -i string
+            Interval duration between runs
+    -once
+            Run once and exit
     -v    Enable verbose logging
 
 ## Examples
@@ -43,6 +47,18 @@ Update a domain with the _local_ IPs assigned to the Pi:
 
 ```sh
 ddnscf -v -d pi1.example.com
+```
+
+Update a domain every minute:
+
+```sh
+ddnscf -v -d pi1.example.com -i 1m
+```
+
+Update a domain once with a specific IP:
+
+```sh
+ddnscf -v -once -d pi1.example.com -ip 192.168.0.2
 ```
 
 ## Tips

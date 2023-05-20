@@ -21,12 +21,12 @@ import (
 )
 
 var config = struct {
-	Domain string
-	// Zone string
-	KeyFile string
-	IP      string
-	// Interval time.Duration
-	Verbose bool
+	Domain   string
+	KeyFile  string
+	IP       string
+	Interval time.Duration
+	Verbose  bool
+	Once     bool
 }{}
 
 var (
@@ -37,17 +37,16 @@ var (
 
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
-	// flag.stringVar(&config.Zone, "z", "", "The name of the Cloudflare Zone which is managing the domain name")
 	flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
 	flag.StringVar(&config.KeyFile, "k", filepath.Join(os.Getenv("HOME"), ".cloudflare"), "Path to cloudflare API credentials file")
-	// flag.DurationVar(&config.Interval, "i", 1*time.Minute, "Duration to wait between IP checks")
+	flag.DurationVar(&config.Interval, "i", 5*time.Minute, "Interval duration between runs")
 	flag.BoolVar(&config.Verbose, "v", false, "Enable verbose logging")
+	flag.BoolVar(&config.Once, "once", false, "Run once and exit")
 	flag.Parse()
 
 	if config.Verbose {
 		logger = log.Default()
 	}
-
 	if config.IP != "" {
 		resolver = ddns.FromString(config.IP)
 	}
@@ -60,18 +59,15 @@ func main() {
 }
 
 func run() error {
-
 	if err := validate(); err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
 	logger.Printf("config is valid: %+v", config)
-
 	key, err := readKey(config.KeyFile)
 	if err != nil {
 		return fmt.Errorf("error reading key: %w", err)
 	}
 	logger.Println("successfully read key from key file")
-
 	client, err := ddns.New(config.Domain,
 		ddns.UsingCloudflare(key),
 		ddns.WithLogger(logger),
@@ -80,10 +76,12 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("error creating ddns.Client: %w", err)
 	}
-	if err := client.RunDDNS(context.TODO()); err != nil {
-		return fmt.Errorf("run: %w", err)
+	ctx := context.Background()
+	if config.Once {
+		return client.RunDDNS(ctx)
 	}
-
+	ddns.RunDaemon(client, ctx, config.Interval, log.Default())
+	<-ctx.Done()
 	return nil
 }
 
@@ -148,15 +146,12 @@ func readKey(path string) (key string, err error) {
 }
 
 func validate() error {
-
 	if config.Domain == "" {
 		return errors.New("domain cannot be empty")
 	}
-
 	if !strings.Contains(config.Domain, ".") {
 		return errors.New("domain must have at least one dot")
 	}
-
 	_, err := os.Stat(config.KeyFile)
 	if os.IsNotExist(err) {
 		logger.Printf("key file \"%s\" does not exist\n", config.KeyFile)
@@ -167,17 +162,14 @@ func validate() error {
 	if err := verifyPermissions(config.KeyFile); err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func verifyPermissions(path string) error {
-
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("error checking keyfile permissions: %w", err)
 	}
-
 	perms := info.Mode().Perm()
 	// Error messages will state that we want 0600,
 	// but we'll also accept 0400 which is even more restricted.
@@ -185,6 +177,5 @@ func verifyPermissions(path string) error {
 	if perms != 0600 && perms != 0400 {
 		return fmt.Errorf("invalid permissions for \"%s\": expected file permissions \"-rw-------\"; found \"%s\"", path, fs.FileMode(perms))
 	}
-
 	return nil
 }
