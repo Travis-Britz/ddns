@@ -24,7 +24,7 @@ var config = struct {
 	Domain string
 	// Zone string
 	KeyFile string
-	// IP       string
+	IP      string
 	// Interval time.Duration
 	Verbose bool
 }{}
@@ -38,7 +38,7 @@ var (
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
 	// flag.stringVar(&config.Zone, "z", "", "The name of the Cloudflare Zone which is managing the domain name")
-	// flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
+	flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
 	flag.StringVar(&config.KeyFile, "k", filepath.Join(os.Getenv("HOME"), ".cloudflare"), "Path to cloudflare API credentials file")
 	// flag.DurationVar(&config.Interval, "i", 1*time.Minute, "Duration to wait between IP checks")
 	flag.BoolVar(&config.Verbose, "v", false, "Enable verbose logging")
@@ -46,6 +46,10 @@ func init() {
 
 	if config.Verbose {
 		logger = log.Default()
+	}
+
+	if config.IP != "" {
+		resolver = ddns.FromString(config.IP)
 	}
 }
 

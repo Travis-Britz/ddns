@@ -33,6 +33,8 @@ ddnscf -h:
             The domain name to update
     -k string
             Path to cloudflare API credentials file (default "~/.cloudflare")
+    -ip string
+            Set a specific IP address
     -v    Enable verbose logging
 
 ## Examples
