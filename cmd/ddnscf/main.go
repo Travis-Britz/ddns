@@ -67,9 +67,11 @@ func run() error {
 		<-c
 		logger.Printf("received interrupt")
 		cancel()
+		<-c
+		log.Fatal("received second interrupt; forcing exit")
 	}()
 
-	if err := validate(); err != nil {
+	if err := validate(ctx); err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
 	logger.Printf("config is valid: %+v", config)
@@ -93,7 +95,7 @@ func run() error {
 	return nil
 }
 
-func runSetup() error {
+func runSetup(ctx context.Context) error {
 	logger.Println("running setup")
 	time.Sleep(200 * time.Millisecond) // dirty timer hack to try to get stderr and stdout output lines to display in order
 	fmt.Printf("Enter Cloudflare API Key: \n")
@@ -101,8 +103,16 @@ func runSetup() error {
 	if err != nil {
 		return fmt.Errorf("runSetup: error reading from stdin: %w", err)
 	}
+	// check if we were told to exit while waiting on ReadPassword
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 	key := string(bytekey)
-
+	if key == "" {
+		return errors.New("key cannot be empty")
+	}
 	api, err := cloudflare.NewWithAPIToken(key)
 	if err != nil {
 		return fmt.Errorf("error creating api client: %w", err)
@@ -153,7 +163,7 @@ func readKey(path string) (key string, err error) {
 	return string(keyb), nil
 }
 
-func validate() error {
+func validate(ctx context.Context) error {
 	if config.Domain == "" {
 		return errors.New("domain cannot be empty")
 	}
@@ -163,7 +173,7 @@ func validate() error {
 	_, err := os.Stat(config.KeyFile)
 	if os.IsNotExist(err) {
 		logger.Printf("key file \"%s\" does not exist\n", config.KeyFile)
-		if err := runSetup(); err != nil {
+		if err := runSetup(ctx); err != nil {
 			return fmt.Errorf("setup: %w", err)
 		}
 	}
