@@ -84,3 +84,23 @@ func ExampleInterfaceResolver() {
 		log.Fatalf("ddns update failed: %s", err)
 	}
 }
+
+func ExampleJoin() {
+	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
+	// I'm not vouching for these services, but they do return the IP of the client connection.
+	r1, _ := ddns.WebResolver("https://ipv4.icanhazip.com/")
+	r2, _ := ddns.WebResolver("https://ipv6.icanhazip.com/")
+
+	ddnsClient, err := ddns.New("dynamic-ip.example.com",
+		ddns.UsingCloudflare(cfkey),
+		ddns.UsingResolver(ddns.Join(r1, r2)),
+	)
+	if err != nil {
+		log.Fatalf("error creating ddns client: %s", err)
+	}
+	// run once:
+	err = ddnsClient.RunDDNS(context.Background())
+	if err != nil {
+		log.Fatalf("ddns update failed: %s", err)
+	}
+}

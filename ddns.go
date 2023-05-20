@@ -2,6 +2,7 @@ package ddns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -189,6 +190,28 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 			}
 		}
 	}()
+}
+
+// Join constructs a resolver that combines the output of multiple resolvers into one.
+//
+// This is useful in some instances such as when you want records for both IPv4 and IPv6,
+// but can only get one or the other from a single web service request.
+func Join(resolver ...Resolver) Resolver {
+	return joinResolver{resolvers: resolver}
+}
+
+type joinResolver struct {
+	resolvers []Resolver
+}
+
+func (r joinResolver) Resolve(ctx context.Context) (addrs []netip.Addr, err error) {
+	var errs []error
+	for _, rr := range r.resolvers {
+		a, err := rr.Resolve(ctx)
+		addrs = append(addrs, a...)
+		errs = append(errs, err)
+	}
+	return addrs, errors.Join(errs...)
 }
 
 func setLog(c *client, logger *log.Logger) {
