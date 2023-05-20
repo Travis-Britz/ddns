@@ -157,10 +157,7 @@ type logf interface {
 // RunDaemon starts a goroutine to run ddnsClient every interval.
 //
 // Run errors are reported to logger.
-// A nil logger indicates messages should be sent to the default log.
-// If ddnsClient was the internal type returned by ddns.New,
-// then the default is to use the configured logger for that type.
-// For other unknown ddnsClient values the default is a logger than writes to io.Discard.
+// A nil logger indicates messages should be sent to the log package's default log.
 //
 // To stop the daemon,
 // cancel the given context.
@@ -169,11 +166,7 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 		interval = 1 * time.Minute
 	}
 	if logger == nil {
-		if c, ok := ddnsClient.(*client); ok && c.logger != nil {
-			logger = c.logger
-		} else {
-			logger = discard
-		}
+		logger = log.Default()
 	}
 	go func() {
 		ticker := time.NewTicker(interval)
