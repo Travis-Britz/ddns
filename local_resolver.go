@@ -9,7 +9,7 @@ import (
 )
 
 // InterfaceResolver constructs a resolver that returns the IP addresses reported by the given interfaces.
-// If no interfaces are provided then all interfaces will be used, but loopback addresses will be skipped.
+// If no interfaces are provided then all interfaces will be used.
 func InterfaceResolver(iface ...string) Resolver {
 	if len(iface) == 0 {
 		return localResolver{}

@@ -6,6 +6,7 @@ import (
 	"net/netip"
 )
 
+// FromString constructs a resolver that parses an IP from the string addr.
 func FromString(addr string) (Resolver, error) {
 	return stringResolver(addr), nil
 }

@@ -13,6 +13,27 @@ import (
 	"time"
 )
 
+// WebResolver constructs a resolver which uses external web services to look up a "public" IP address.
+//
+// Each serviceURL must speak http and return status "200 OK",
+// with a valid IPv4 or IPv6 address as the first line of the response body.
+// All other responses are considered an error.
+//
+// If only one serviceURL is given,
+// then the resolver will simply return the response.
+// If multiple are given,
+// then the resolver will request from up to three of them and only return successfully if the first two non-error responses agreed on the IP.
+// This approach is taken due to the sensitive nature of having control over DNS records.
+//
+// For clients which have both IPv4 and IPv6 capability,
+// there are at least two ways to ensure both responses match:
+// supply a custom *http.Client with a custom http.Transport (using ddns.WithHTTPClient),
+// or use a public IP service endpoint that prefers one or the other, e.g. https://v4.example.com.
+//
+// If you want both IPv4 and IPv6 DNS records set,
+// then use one of the above approaches for each of two web resolvers and use ddns.Join to combine their results.
+//
+// The recommended approach is to run your own service over https.
 func WebResolver(serviceURL ...string) (Resolver, error) {
 	var URLs []*url.URL
 	for _, u := range serviceURL {
@@ -25,10 +46,6 @@ func WebResolver(serviceURL ...string) (Resolver, error) {
 	return &webResolver{serviceURLs: URLs}, nil
 }
 
-// webResolver implements ddns.Resolver to look up our public IP address.
-//
-// urls must speak http and return status "200 OK" with a valid IPv4 or IPv6 address as the first line of the response body.
-// All other responses are considered an error.
 type webResolver struct {
 	httpClient  *http.Client
 	serviceURLs []*url.URL
