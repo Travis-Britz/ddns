@@ -36,10 +36,11 @@ type Resolver interface {
 
 // Provider is the interface for setting DNS records with a DNS provider.
 //
-// Records may be IPv4 or IPv6,
+// Records may be IPv4 and IPv6 combined,
 // and implementations should expect both even if they only use one.
 //
-// Implementations should filter only the changed records (wording)
+// The given records are the desired set for domain.
+// It is up to implementations to track changes between calls.
 type Provider interface {
 	SetDNSRecords(ctx context.Context, domain string, records []netip.Addr) error
 }
@@ -48,7 +49,7 @@ type Cache interface {
 	FilterNew([]netip.Addr) (add []netip.Addr, remove []netip.Addr)
 }
 
-// New creates a new DDNSClient configured by options for domain.
+// New creates a new DDNSClient for domain configured by options.
 func New(domain string, options ...clientOption) (DDNSClient, error) {
 	if domain == "" {
 		return nil, fmt.Errorf("ddns.New: domain cannot be empty")
