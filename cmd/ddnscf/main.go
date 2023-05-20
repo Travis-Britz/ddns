@@ -40,7 +40,7 @@ var (
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
 	flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
-	flag.StringVar(&config.KeyFile, "k", filepath.Join(os.Getenv("HOME"), ".cloudflare"), "Path to cloudflare API credentials file")
+	flag.StringVar(&config.KeyFile, "k", filepath.Join(env("HOME", env("USERPROFILE", ".")), ".cloudflare"), "Path to cloudflare API credentials file")
 	flag.DurationVar(&config.Interval, "i", 5*time.Minute, "Interval duration between runs")
 	flag.BoolVar(&config.Verbose, "v", false, "Enable verbose logging")
 	flag.BoolVar(&config.Once, "once", false, "Run once and exit")
