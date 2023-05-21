@@ -33,33 +33,6 @@ To skip the prompt you may create the key file in advance with the proper file p
 echo "MyVerySecretDNSToken" > ~/.cloudflare && chmod 600 ~/.cloudflare
 ```
 
-### Systemd Service
-
-```sh
-cd /lib/systemd/system
-sudo touch ddnscf.service
-```
-
-Add the contents:
-
-```ini
-[Unit]
-Description=Keep DNS records updated
-After=network-online.target
-
-[Service]
-ExecStart=/usr/bin/ddnscf -d pi1.example.com -k /home/pi/.cloudflare
-User=pi
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```sh
-sudo systemctl daemon-reload
-sudo systemctl enable ddnscf.service
-```
-
 ### Usage
 
 ddnscf -h:
@@ -103,6 +76,33 @@ Update a domain once with a specific IP:
 
 ```sh
 ddnscf -v -d pi1.example.com -ip 192.168.0.2 -once
+```
+
+### Systemd Service
+
+```sh
+cd /lib/systemd/system
+sudo touch ddnscf.service
+```
+
+Add the contents:
+
+```ini
+[Unit]
+Description=Keep DNS records updated
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ddnscf -d pi1.example.com -k /home/pi/.cloudflare
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable ddnscf.service
 ```
 
 ## Tips
