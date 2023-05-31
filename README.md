@@ -9,6 +9,37 @@ ddns is a small Go library for dynamically updating DNS records.
 Currently the only DNS provider included is Cloudflare,
 but the [ddns.Provider](https://pkg.go.dev/github.com/Travis-Britz/ddns#Provider) interface is a single method if you would like to wrap your own provider's API.
 
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+
+	"github.com/Travis-Britz/ddns"
+)
+
+func main() {
+	c, err := ddns.New(
+		"dynamic-local-ip.example.com",
+		ddns.NewCloudflare(os.Getenv("CLOUDFLARE_ZONE_TOKEN")),
+		ddns.UsingResolver(ddns.InterfaceResolver("eth0")),
+	)
+	if err != nil {
+		log.Fatalf("error creating ddns client: %s", err)
+	}
+	ctx := context.Background()
+	err = c.RunDDNS(ctx)
+	if err != nil {
+		log.Fatalf("dns update failed: %s", err)
+	}
+}
+
+```
+
+More examples: https://pkg.go.dev/github.com/Travis-Britz/ddns#pkg-examples
+
 ## ddnscf
 
 ddnscf is a small command line tool for dynamically updating Cloudflare DNS records.
@@ -50,7 +81,8 @@ ddnscf -h:
             Interval duration between runs (default 5m0s)
     -once
             Run once and exit
-    -v    Enable verbose logging
+    -v
+            Enable verbose logging
 
 ### Examples
 
@@ -78,7 +110,9 @@ Update a domain once with a specific IP:
 ddnscf -v -d pi1.example.com -ip 192.168.0.2 -once
 ```
 
-### Systemd Service
+## Systemd Service
+
+Create the service file:
 
 ```sh
 cd /lib/systemd/system
