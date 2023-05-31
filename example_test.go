@@ -13,8 +13,9 @@ import (
 
 func ExampleNew() {
 	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
-	c, err := ddns.New("dynamic-local-ip.example.com",
-		ddns.UsingCloudflare(cfkey),
+	c, err := ddns.New(
+		"dynamic-local-ip.example.com",
+		ddns.NewCloudflare(cfkey),
 		ddns.UsingResolver(ddns.InterfaceResolver("eth0")),
 		ddns.WithLogger(log.New(io.Discard, "", log.LstdFlags)),
 		ddns.UsingHTTPClient(http.DefaultClient),
@@ -38,8 +39,9 @@ func ExampleWebResolver() {
 		"https://icanhazip.com/", // operated by Cloudflare since ~2021
 		"https://ipinfo.io/ip",
 	)
-	ddnsClient, err := ddns.New("dynamic-ip.example.com",
-		ddns.UsingCloudflare(cfkey),
+	ddnsClient, err := ddns.New(
+		"dynamic-ip.example.com",
+		ddns.NewCloudflare(cfkey),
 		ddns.UsingResolver(r),
 	)
 	if err != nil {
@@ -55,7 +57,7 @@ func ExampleWebResolver() {
 func ExampleRunDaemon() {
 	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	ddnsClient, err := ddns.New("dynamic-local-ip.example.com",
-		ddns.UsingCloudflare(cfkey),
+		ddns.NewCloudflare(cfkey),
 		ddns.WithLogger(log.Default()),
 	)
 	if err != nil {
@@ -72,7 +74,7 @@ func ExampleInterfaceResolver() {
 	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	resolver := ddns.InterfaceResolver("eth0", "wlan0")
 	ddnsClient, err := ddns.New("dynamic-local-ip.example.com",
-		ddns.UsingCloudflare(cfkey),
+		ddns.NewCloudflare(cfkey),
 		ddns.UsingResolver(resolver),
 	)
 	if err != nil {
@@ -88,7 +90,7 @@ func ExampleInterfaceResolver() {
 func ExampleJoin() {
 	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	ddnsClient, err := ddns.New("dynamic-ip.example.com",
-		ddns.UsingCloudflare(cfkey),
+		ddns.NewCloudflare(cfkey),
 		ddns.UsingResolver(
 			ddns.Join(
 				ddns.WebResolver("https://ipv4.icanhazip.com/"),

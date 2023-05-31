@@ -49,23 +49,31 @@ type cache interface {
 	FilterNew([]netip.Addr) (add []netip.Addr, remove []netip.Addr)
 }
 
+// providerFactory is only used to let us avoid a line of error checking in the happy path,
+// and lets the ddns.New function check for the error instead.
+type providerFactory func() (Provider, error)
+
 // New creates a new DDNSClient for domain configured by options.
-func New(domain string, options ...clientOption) (DDNSClient, error) {
+func New(domain string, providerFactory providerFactory, options ...clientOption) (DDNSClient, error) {
 	if domain == "" {
-		return nil, fmt.Errorf("ddns.New: domain cannot be empty")
+		return nil, errors.New("ddns.New: domain cannot be empty")
+	}
+	provider, err := providerFactory()
+	if err != nil {
+		return nil, fmt.Errorf("ddns.New: unable to create provider: %w", err)
+	}
+	if provider == nil {
+		return nil, errors.New("ddns.New: provider cannot be nil")
 	}
 	c := &client{
 		Resolver: defaultResolver,
+		Provider: provider,
 		domain:   domain,
 	}
 	for i, opt := range options {
 		if err := opt(c); err != nil {
 			return nil, fmt.Errorf("ddns.New: option %d returned an error: %s", i, err)
 		}
-	}
-
-	if c.Provider == nil {
-		return nil, fmt.Errorf("ddns.New: no DNS provider was registered and there is no default option - use ddns.UsingCloudflare or similar")
 	}
 
 	// this lets us propagate the logger to dependencies that use one if WithLogger was called before all of the dependencies were registered
@@ -75,12 +83,9 @@ func New(domain string, options ...clientOption) (DDNSClient, error) {
 
 type clientOption func(*client) error
 
-func UsingCloudflare(token string) clientOption {
-	return func(c *client) (err error) {
-		if c.Provider, err = newCloudflareProvider(token); err != nil {
-			return fmt.Errorf("ddns.UsingCloudflare: error creating cloudflare DNS provider: %w", err)
-		}
-		return nil
+func NewCloudflare(token string) func() (Provider, error) {
+	return func() (Provider, error) {
+		return newCloudflareProvider(token)
 	}
 }
 func UsingResolver(resolver Resolver) clientOption {

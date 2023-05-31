@@ -86,7 +86,7 @@ func run() error {
 	}
 	logger.Println("successfully read key from key file")
 	client, err := ddns.New(config.Domain,
-		ddns.UsingCloudflare(key),
+		ddns.NewCloudflare(key),
 		ddns.WithLogger(logger),
 		ddns.UsingResolver(resolver),
 	)
