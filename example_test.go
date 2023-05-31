@@ -12,10 +12,9 @@ import (
 )
 
 func ExampleNew() {
-	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	c, err := ddns.New(
 		"dynamic-local-ip.example.com",
-		ddns.NewCloudflare(cfkey),
+		ddns.NewCloudflare(os.Getenv("CLOUDFLARE_ZONE_TOKEN")),
 		ddns.UsingResolver(ddns.InterfaceResolver("eth0")),
 		ddns.WithLogger(log.New(io.Discard, "", log.LstdFlags)),
 		ddns.UsingHTTPClient(http.DefaultClient),
@@ -31,7 +30,6 @@ func ExampleNew() {
 }
 
 func ExampleWebResolver() {
-	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	// I'm not vouching for these services, but they do return the IP of the client connection.
 	// If possible, run your own and provide the URL here instead.
 	r := ddns.WebResolver(
@@ -41,7 +39,7 @@ func ExampleWebResolver() {
 	)
 	ddnsClient, err := ddns.New(
 		"dynamic-ip.example.com",
-		ddns.NewCloudflare(cfkey),
+		ddns.NewCloudflare(os.Getenv("CLOUDFLARE_ZONE_TOKEN")),
 		ddns.UsingResolver(r),
 	)
 	if err != nil {
@@ -55,9 +53,8 @@ func ExampleWebResolver() {
 }
 
 func ExampleRunDaemon() {
-	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	ddnsClient, err := ddns.New("dynamic-local-ip.example.com",
-		ddns.NewCloudflare(cfkey),
+		ddns.NewCloudflare(os.Getenv("CLOUDFLARE_ZONE_TOKEN")),
 		ddns.WithLogger(log.Default()),
 	)
 	if err != nil {
@@ -71,10 +68,9 @@ func ExampleRunDaemon() {
 	<-ctx.Done()
 }
 func ExampleInterfaceResolver() {
-	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	resolver := ddns.InterfaceResolver("eth0", "wlan0")
 	ddnsClient, err := ddns.New("dynamic-local-ip.example.com",
-		ddns.NewCloudflare(cfkey),
+		ddns.NewCloudflare(os.Getenv("CLOUDFLARE_ZONE_TOKEN")),
 		ddns.UsingResolver(resolver),
 	)
 	if err != nil {
@@ -88,9 +84,8 @@ func ExampleInterfaceResolver() {
 }
 
 func ExampleJoin() {
-	cfkey, _ := os.LookupEnv("CLOUDFLARE_ZONE_TOKEN")
 	ddnsClient, err := ddns.New("dynamic-ip.example.com",
-		ddns.NewCloudflare(cfkey),
+		ddns.NewCloudflare(os.Getenv("CLOUDFLARE_ZONE_TOKEN")),
 		ddns.UsingResolver(
 			ddns.Join(
 				ddns.WebResolver("https://ipv4.icanhazip.com/"),
