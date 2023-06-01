@@ -15,7 +15,7 @@ import (
 
 var defaultResolver = InterfaceResolver()
 
-var discard = log.New(io.Discard, "", log.LstdFlags)
+var discard = log.New(io.Discard, "", 0)
 
 // DDNSClient is the interface for updating Dynamic DNS records.
 //
@@ -24,7 +24,7 @@ type DDNSClient interface {
 	RunDDNS(ctx context.Context) error
 }
 
-// Resolver is the interface for looking up our external IP addresses.
+// Resolver is the interface for looking up our IP addresses.
 //
 // Results may be either IPv4 or IPv6,
 // but should not include loopback interface addresses such as ::1.
@@ -49,16 +49,19 @@ type cache interface {
 	FilterNew([]netip.Addr) (add []netip.Addr, remove []netip.Addr)
 }
 
-// providerFactory is only used to let us avoid a line of error checking in the happy path,
+// providerFn is a function that takes no arguments and returns a new [Provider] and error.
+//
+// providerFn is only used to let us avoid a line of error checking in the happy path,
 // and lets the ddns.New function check for the error instead.
-type providerFactory func() (Provider, error)
+type providerFn func() (Provider, error)
 
-// New creates a new DDNSClient for domain configured by options.
-func New(domain string, providerFactory providerFactory, options ...clientOption) (DDNSClient, error) {
+// New creates a new DDNSClient for domain using the given DNS provider.
+// Additional options may be specified: [UsingResolver], [UsingHTTPClient], [WithLogger].
+func New(domain string, providerFn providerFn, options ...clientOption) (DDNSClient, error) {
 	if domain == "" {
 		return nil, errors.New("ddns.New: domain cannot be empty")
 	}
-	provider, err := providerFactory()
+	provider, err := providerFn()
 	if err != nil {
 		return nil, fmt.Errorf("ddns.New: unable to create provider: %w", err)
 	}
@@ -83,11 +86,17 @@ func New(domain string, providerFactory providerFactory, options ...clientOption
 
 type clientOption func(*client) error
 
+// NewCloudflare is used by [ddns.New] to create a new Provider for Cloudflare.
 func NewCloudflare(token string) func() (Provider, error) {
 	return func() (Provider, error) {
 		return newCloudflareProvider(token)
 	}
 }
+
+// UsingResolver configures the client with a different resolver.
+// The default resolver gets the IP addresses of the local network interfaces.
+//
+// Available resolvers in this package: [InterfaceResolver], [WebResolver], [FromString].
 func UsingResolver(resolver Resolver) clientOption {
 	return func(c *client) error {
 		if resolver == nil {
@@ -159,13 +168,16 @@ type logf interface {
 	Printf(string, ...any)
 }
 
-// RunDaemon starts a goroutine to run ddnsClient every interval.
+// RunDaemon runs ddnsClient every interval.
 //
 // Run errors are reported to logger.
 // A nil logger indicates messages should be sent to the log package's default log.
 //
 // To stop the daemon,
 // cancel the given context.
+//
+// The daemon will also exit early if it detects authentication or authorization errors,
+// rather than continue running with an expired or invalid token.
 func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duration, logger logf) {
 	if interval < 1*time.Minute {
 		interval = 1 * time.Minute
@@ -181,18 +193,14 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 		if err != nil {
 			logger.Printf("ddns.RunDaemon: %s", err)
 		}
-		var authentication interface {
-			IsAuthenticationError() bool
-		}
+		var authentication interface{ IsAuthenticationError() bool }
 		if errors.As(err, &authentication) {
 			if authentication.IsAuthenticationError() {
 				logger.Printf("ddns.RunDaemon: bad credentials detected; stopping daemon")
 				return
 			}
 		}
-		var authorization interface {
-			IsAuthorizationError() bool
-		}
+		var authorization interface{ IsAuthorizationError() bool }
 		if errors.As(err, &authorization) {
 			if authorization.IsAuthorizationError() {
 				logger.Printf("ddns.RunDaemon: credentials are not authorized to perform that action; stopping daemon")
@@ -205,6 +213,14 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 		case <-ticker.C:
 		}
 	}
+}
+
+// The ResolverFunc type is an adapter that allows the use of oridnary functions as resolvers.
+type ResolverFunc func(context.Context) ([]netip.Addr, error)
+
+// Resolve calls f(ctx)
+func (f ResolverFunc) Resolve(ctx context.Context) ([]netip.Addr, error) {
+	return f(ctx)
 }
 
 // Join constructs a resolver that combines the output of multiple resolvers into one.
@@ -233,9 +249,7 @@ func setLog(c *client, logger *log.Logger) {
 	if logger == nil {
 		logger = discard
 	}
-	type setLogger interface {
-		SetLogger(*log.Logger)
-	}
+	type setLogger interface{ SetLogger(*log.Logger) }
 
 	switch p := c.Provider.(type) {
 	case *cloudflareProvider:
@@ -247,7 +261,6 @@ func setLog(c *client, logger *log.Logger) {
 	switch r := c.Resolver.(type) {
 	case setLogger:
 		r.SetLogger(logger)
-	case *localResolver:
 	case *webResolver:
 	case *stringResolver:
 	}

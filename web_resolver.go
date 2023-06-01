@@ -15,7 +15,7 @@ import (
 
 // WebResolver constructs a resolver which uses external web services to look up a "public" IP address.
 //
-// Each serviceURL must speak http and return status "200 OK",
+// Each serviceURL must speak HTTP and return status "200 OK",
 // with a valid IPv4 or IPv6 address as the first line of the response body.
 // All other responses are considered an error.
 //
@@ -23,16 +23,21 @@ import (
 // then the resolver will simply return the response.
 // If multiple are given,
 // then the resolver will request from up to three of them and only return successfully if the first two non-error responses agreed on the IP.
+// No addresses will be returned if the web services did not agree on the IP address.
 // This approach is taken due to the sensitive nature of public services having control over DNS records.
-// It is recommended to run your own service over https if possible.
+// It is recommended to run your own service over https instead when possible.
 //
 // For clients which have both IPv4 and IPv6 capability,
-// there are at least two ways to ensure both responses match:
-// supply a custom *http.Client (using ddns.WithHTTPClient) with a custom http.Transport which is configured to use IPv4/6,
-// or use a public IP service endpoint that prefers one or the other, e.g. https://v4.example.com.
+// it is possible for one service to return IPv4 and another to return IPv6,
+// causing matching to fail.
+// There are at least two ways to ensure both responses use the same protocol version:
+// supply a custom *http.Client (using [ddns.WithHTTPClient]) with a custom http.Transport which is configured to use IPv4/6,
+// or simply use a public IP service endpoint that prefers one or the other, e.g. https://ipv4.icanhazip.com.
 //
 // If you want both IPv4 and IPv6 DNS records set,
-// then use one of the above approaches for each of two web resolvers and use ddns.Join to combine their results.
+// then use one of the above approaches to ensure IPv4 and IPv6 respectively for each of two web resolvers and then use [ddns.Join] to combine their results.
+//
+// The http.Client used to make requests can be configured in ddns.New's clientOptions with [ddns.UsingHTTPClient].
 func WebResolver(serviceURL ...string) Resolver {
 	return &webResolver{serviceURLs: serviceURL}
 }
