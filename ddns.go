@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/netip"
+	"sync"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -237,10 +238,26 @@ type joinResolver struct {
 
 func (r joinResolver) Resolve(ctx context.Context) (addrs []netip.Addr, err error) {
 	var errs []error
+	type result struct {
+		addrs []netip.Addr
+		err   error
+	}
+	results := make(chan result, len(r.resolvers))
+	var wg sync.WaitGroup
 	for _, rr := range r.resolvers {
-		a, err := rr.Resolve(ctx)
-		addrs = append(addrs, a...)
-		errs = append(errs, err)
+		wg.Add(1)
+		go func(resolver Resolver) {
+			defer wg.Done()
+			r := result{}
+			r.addrs, r.err = resolver.Resolve(ctx)
+			results <- r
+		}(rr)
+	}
+	wg.Wait()
+	close(results)
+	for r := range results {
+		addrs = append(addrs, r.addrs...)
+		errs = append(errs, r.err)
 	}
 	return addrs, errors.Join(errs...)
 }
