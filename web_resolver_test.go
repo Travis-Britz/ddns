@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,7 +14,12 @@ import (
 )
 
 func TestLookup(t *testing.T) {
+	hits := 0
+	var mu sync.Mutex
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		hits++
+		mu.Unlock()
 		io.WriteString(w, "192.168.2.1")
 	}))
 	defer srv.Close()
@@ -21,6 +27,9 @@ func TestLookup(t *testing.T) {
 	res, err := wr.Resolve(context.Background())
 	if err != nil {
 		t.Fatalf("Request failed: %s", err)
+	}
+	if hits != 1 {
+		t.Errorf("Expected 1 hit; got %d", hits)
 	}
 	if expected, got := netip.MustParseAddr("192.168.2.1"), res[0]; expected != got {
 		t.Fatalf("Expected %q; got %q", expected, got)
