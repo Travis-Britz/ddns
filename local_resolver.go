@@ -8,11 +8,11 @@ import (
 	"net/netip"
 )
 
-// InterfaceResolver constructs a resolver that returns the IP addresses reported by the given interfaces.
+// InterfaceResolver constructs a resolver that returns the IP addresses reported by the given network interfaces.
 // If no interfaces are provided then all interfaces will be used.
 func InterfaceResolver(iface ...string) Resolver {
 	if len(iface) == 0 {
-		return localResolver{}
+		return ResolverFunc(resolveLocalIPs)
 	}
 	return interfaceResolver{ifaces: iface}
 }
@@ -48,9 +48,7 @@ func (r interfaceResolver) Resolve(ctx context.Context) (addrs []netip.Addr, err
 	return addrs, errors.Join(errs...)
 }
 
-type localResolver struct{}
-
-func (r localResolver) Resolve(ctx context.Context) (addrs []netip.Addr, err error) {
+func resolveLocalIPs(ctx context.Context) (addrs []netip.Addr, err error) {
 	adds, err := net.InterfaceAddrs()
 	if err != nil {
 		return nil, fmt.Errorf("error getting addresses for interface: %w", err)
