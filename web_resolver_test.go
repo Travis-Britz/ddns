@@ -119,7 +119,10 @@ func TestConcurrency(t *testing.T) {
 
 func TestHitCount(t *testing.T) {
 	// This test should align the behavior of the WebResolver closer to its comment.
-	// todo: check that the hits are unique to each resolver, to prove it's not hitting the first in the list three times or something stupid.
+	// todo: check that the hits are unique to each resolver,
+	// to prove it's not hitting the first in the list three times or something stupid.
+	// todo: the hit counter can lag behind with only 2 hits and have an in-flight request for the next test,
+	// since the webresolver returns after 2 successful matching messages...
 	var mu sync.Mutex
 	var hits int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
