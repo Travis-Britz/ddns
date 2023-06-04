@@ -14,12 +14,7 @@ import (
 )
 
 func TestLookup(t *testing.T) {
-	hits := 0
-	var mu sync.Mutex
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		hits++
-		mu.Unlock()
 		io.WriteString(w, "192.168.2.1")
 	}))
 	defer srv.Close()
@@ -28,9 +23,7 @@ func TestLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %s", err)
 	}
-	if hits != 1 {
-		t.Errorf("Expected 1 hit; got %d", hits)
-	}
+
 	if expected, got := netip.MustParseAddr("192.168.2.1"), res[0]; expected != got {
 		t.Fatalf("Expected %q; got %q", expected, got)
 	}
@@ -121,5 +114,46 @@ func TestConcurrency(t *testing.T) {
 	}
 	if expected, got := netip.MustParseAddr("192.168.2.1"), res[0]; expected != got {
 		t.Fatalf("Expected %q; got %q", expected, got)
+	}
+}
+
+func TestHitCount(t *testing.T) {
+	// This test should align the behavior of the WebResolver closer to its comment.
+	// todo: check that the hits are unique to each resolver, to prove it's not hitting the first in the list three times or something stupid.
+	var mu sync.Mutex
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		hits++
+		mu.Unlock()
+		io.WriteString(w, "192.168.2.1")
+	}))
+	defer srv.Close()
+
+	wrs := []ddns.Resolver{
+		ddns.WebResolver(srv.URL),
+		ddns.WebResolver(srv.URL, srv.URL),
+		ddns.WebResolver(srv.URL, srv.URL, srv.URL),
+		ddns.WebResolver(srv.URL, srv.URL, srv.URL, srv.URL),
+		ddns.WebResolver(srv.URL, srv.URL, srv.URL, srv.URL, srv.URL),
+	}
+	for i := 0; i < 5; i++ {
+		mu.Lock()
+		hits = 0
+		mu.Unlock()
+		wr := wrs[i]
+		_, err := wr.Resolve(context.Background())
+		if err != nil {
+			t.Fatalf("Request failed: %s", err)
+		}
+		mu.Lock()
+
+		if i < 3 && hits != i+1 {
+			t.Fatalf("Expected %d hits; got %d", i+1, hits)
+		} else if hits != 3 {
+			t.Fatalf("Expected 3 hits; got %d", hits)
+		}
+
+		mu.Unlock()
 	}
 }
