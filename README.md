@@ -3,6 +3,7 @@ This project was written specifically to run on the Raspberry Pi Zero W and upda
 # ddns
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/Travis-Britz/ddns.svg)](https://pkg.go.dev/github.com/Travis-Britz/ddns)
+[![Go](https://github.com/Travis-Britz/ddns/actions/workflows/go.yml/badge.svg)](https://github.com/Travis-Britz/ddns/actions/workflows/go.yml)
 
 ddns is a small Go library for dynamically updating DNS records.
 
