@@ -147,13 +147,12 @@ func TestHitCount(t *testing.T) {
 			t.Fatalf("Request failed: %s", err)
 		}
 		mu.Lock()
-
-		if i < 3 && hits != i+1 {
-			t.Fatalf("Expected %d hits; got %d", i+1, hits)
-		} else if hits != 3 {
-			t.Fatalf("Expected 3 hits; got %d", hits)
-		}
-
+		h := hits
 		mu.Unlock()
+		if i < 3 && h != i+1 {
+			t.Fatalf("Expected %d hits; got %d", i+1, h)
+		} else if h != 3 {
+			t.Fatalf("Expected 3 hits; got %d", h)
+		}
 	}
 }
