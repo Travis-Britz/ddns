@@ -72,6 +72,16 @@ func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 		URLs = append(URLs, pu)
 	}
 
+	var useCount, waitFor int
+	switch len(URLs) {
+	case 1:
+		useCount, waitFor = 1, 1
+	case 2:
+		useCount, waitFor = 2, 2
+	default:
+		useCount, waitFor = 3, 2
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -80,7 +90,6 @@ func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 		err  error
 	}
 
-	const useCount = 3
 	results := make(chan result, useCount)
 
 	resolvercount := len(URLs)
@@ -112,13 +121,16 @@ func (wr *webResolver) Resolve(ctx context.Context) ([]netip.Addr, error) {
 		resultCount++ // don't increase the result count for errors
 		if (ip == netip.Addr{}) {
 			ip = r.addr
+			if waitFor == 1 {
+				return []netip.Addr{ip}, nil
+			}
 			continue
 		}
 		if ip == r.addr {
 			return []netip.Addr{ip}, nil
 		}
 	}
-	if resultCount < 2 {
+	if resultCount < waitFor {
 		return nil, fmt.Errorf("not enough resolvers responded without errors: %w", errors.Join(errs...))
 	}
 

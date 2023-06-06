@@ -151,7 +151,7 @@ func TestHitCount(t *testing.T) {
 		mu.Unlock()
 		if i < 3 && h != i+1 {
 			t.Fatalf("Expected %d hits; got %d", i+1, h)
-		} else if h != 3 {
+		} else if i > 2 && h != 3 {
 			t.Fatalf("Expected 3 hits; got %d", h)
 		}
 	}
