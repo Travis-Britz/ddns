@@ -52,7 +52,7 @@ func TestMismatch(t *testing.T) {
 }
 
 func TestOneFailure(t *testing.T) {
-	ips := []string{"192.168.2.1", "a", "192.168.2.1"}
+	ips := []string{"192.168.2.1", "invalid ip", "192.168.2.1"}
 	var srvs []string
 	for _, ip := range ips {
 		ip := ip
@@ -119,17 +119,14 @@ func TestConcurrency(t *testing.T) {
 
 func TestHitCount(t *testing.T) {
 	// This test should align the behavior of the WebResolver closer to its comment.
-	// todo: check that the hits are unique to each resolver,
-	// to prove it's not hitting the first in the list three times or something stupid.
-	// todo: the hit counter can lag behind with only 2 hits and have an in-flight request for the next test,
-	// since the webresolver returns after 2 successful matching messages...
 	var mu sync.Mutex
 	var hits int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		hits++
+		// forcing every request to fail should prevent early returns with in-flight requests
+		io.WriteString(w, "invalid ip")
 		mu.Unlock()
-		io.WriteString(w, "192.168.2.1")
 	}))
 	defer srv.Close()
 
@@ -146,8 +143,8 @@ func TestHitCount(t *testing.T) {
 		mu.Unlock()
 		wr := wrs[i]
 		_, err := wr.Resolve(context.Background())
-		if err != nil {
-			t.Fatalf("Request failed: %s", err)
+		if err == nil {
+			t.Fatalf("Expected an error; got err == nil")
 		}
 		mu.Lock()
 		h := hits
