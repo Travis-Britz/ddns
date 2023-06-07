@@ -22,24 +22,26 @@ import (
 )
 
 var config = struct {
-	Domain    string
-	KeyFile   string
-	IP        string
-	Interval  time.Duration
-	Verbose   bool
-	Once      bool
-	Interface string
+	Domain     string
+	KeyFile    string
+	IP         string
+	ServiceURL string
+	Interval   time.Duration
+	Verbose    bool
+	Once       bool
+	Interface  string
 }{}
 
 var (
 	resolver ddns.Resolver
 	provider ddns.Provider
-	logger   *log.Logger = log.New(io.Discard, "", log.LstdFlags)
+	logger   *log.Logger = log.New(io.Discard, "", 0)
 )
 
 func init() {
 	flag.StringVar(&config.Domain, "d", config.Domain, "DNS entry to update")
 	flag.StringVar(&config.IP, "ip", config.Domain, "IP address to set")
+	flag.StringVar(&config.ServiceURL, "url", config.Domain, "URL of public IP lookup service")
 	flag.StringVar(&config.KeyFile, "k", filepath.Join(env("HOME", env("USERPROFILE", ".")), ".cloudflare"), "Path to cloudflare API credentials file")
 	flag.DurationVar(&config.Interval, "i", 5*time.Minute, "Interval duration between runs")
 	flag.BoolVar(&config.Verbose, "v", false, "Enable verbose logging")
@@ -55,6 +57,9 @@ func init() {
 	}
 	if config.Interface != "" {
 		resolver = ddns.InterfaceResolver(config.Interface)
+	}
+	if config.ServiceURL != "" {
+		resolver = ddns.WebResolver(config.ServiceURL)
 	}
 }
 

@@ -76,6 +76,8 @@ ddnscf -h:
             Path to cloudflare API credentials file (default "~/.cloudflare")
     -ip string
             Set a specific IP address
+    -url string
+            Use a public IP lookup URL
     -if string
             Use a specific network interface
     -i string
@@ -87,7 +89,7 @@ ddnscf -h:
 
 ### Examples
 
-Update a domain with the _local_ IPs assigned to the Pi:
+Update a domain with all of the _local_ IPs assigned to the Pi:
 
 ```sh
 ddnscf -v -d pi1.example.com
@@ -99,16 +101,24 @@ Update a domain with the IPs for a specific network interface:
 ddnscf -v -d pi1.example.com -if wlan0
 ```
 
-Update a domain every minute:
+Update a domain with our public IP (using a lookup service):
 
 ```sh
-ddnscf -v -d pi1.example.com -i 1m
+ddnscf -v -d pi1.example.com -url https://ipv4.icanhazip.com
 ```
+
+`url` must speak HTTP and respond "200 OK" with an IP address as the first line of the response body.
 
 Update a domain once with a specific IP:
 
 ```sh
 ddnscf -v -d pi1.example.com -ip 192.168.0.2 -once
+```
+
+Update a domain every minute:
+
+```sh
+ddnscf -v -d pi1.example.com -i 1m
 ```
 
 ## Systemd Service
