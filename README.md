@@ -136,6 +136,7 @@ Add the contents:
 [Unit]
 Description=Keep DNS records updated
 After=network-online.target
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/bin/ddnscf -d pi1.example.com -k /home/pi/.cloudflare
