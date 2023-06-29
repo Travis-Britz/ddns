@@ -266,6 +266,7 @@ func setLog(c *client, logger *log.Logger) {
 	if logger == nil {
 		logger = discard
 	}
+	c.logger = logger
 	type setLogger interface{ SetLogger(*log.Logger) }
 
 	switch p := c.Provider.(type) {
