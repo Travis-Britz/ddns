@@ -216,7 +216,7 @@ func RunDaemon(ddnsClient DDNSClient, ctx context.Context, interval time.Duratio
 	}
 }
 
-// The ResolverFunc type is an adapter that allows the use of oridnary functions as resolvers.
+// The ResolverFunc type is an adapter that allows the use of ordinary functions as resolvers.
 type ResolverFunc func(context.Context) ([]netip.Addr, error)
 
 // Resolve calls f(ctx)
